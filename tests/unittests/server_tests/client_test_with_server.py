@@ -24,10 +24,10 @@ from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 
 from influxdb.tests import skip_if_pypy, using_pypy, skip_server_tests
-from influxdb.tests.server_tests.base import ManyTestCasesWithServerMixin
-from influxdb.tests.server_tests.base import SingleTestCaseWithServerMixin
-from influxdb.tests.server_tests.base import ManyTestCasesWithServerGzipMixin
-from influxdb.tests.server_tests.base import SingleTestCaseWithServerGzipMixin
+from tests.unittests.tests.server_tests import ManyTestCasesWithServerMixin
+from tests.unittests.tests.server_tests import SingleTestCaseWithServerMixin
+from tests.unittests.tests.server_tests import ManyTestCasesWithServerGzipMixin
+from tests.unittests.tests.server_tests import SingleTestCaseWithServerGzipMixin
 
 # By default, raise exceptions on warnings
 warnings.simplefilter('error', FutureWarning)

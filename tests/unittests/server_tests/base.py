@@ -9,7 +9,7 @@ from __future__ import unicode_literals
 import sys
 
 from influxdb.tests import using_pypy
-from influxdb.tests.server_tests.influxdb_instance import InfluxDbInstance
+from tests.unittests.tests.server_tests import InfluxDbInstance
 
 from influxdb.client import InfluxDBClient
 

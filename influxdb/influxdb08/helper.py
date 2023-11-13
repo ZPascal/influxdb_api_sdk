@@ -9,8 +9,6 @@ from __future__ import unicode_literals
 from collections import namedtuple, defaultdict
 from warnings import warn
 
-import six
-
 
 class SeriesHelper(object):
     """Define the SeriesHelper object for InfluxDB v0.8.
@@ -141,7 +139,7 @@ class SeriesHelper(object):
         json = []
         if not cls.__initialized__:
             cls._reset_()
-        for series_name, data in six.iteritems(cls._datapoints):
+        for series_name, data in iter(cls._datapoints.items()):
             json.append({'name': series_name,
                          'columns': cls._fields,
                          'points': [[getattr(point, k) for k in cls._fields]

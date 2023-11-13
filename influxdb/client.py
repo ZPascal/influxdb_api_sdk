@@ -13,14 +13,13 @@ import io
 import json
 import random
 import socket
+import ssl
 import struct
 import time
 from itertools import chain, islice
 
 import msgpack
-import requests
-import requests.exceptions
-from requests.adapters import HTTPAdapter
+import urllib3
 from six.moves.urllib.parse import urlparse
 
 from influxdb.line_protocol import make_lines, quote_ident, quote_literal
@@ -54,9 +53,9 @@ class InfluxDBClient(object):
     :param ssl: use https instead of http to connect to InfluxDB, defaults to
         False
     :type ssl: bool
-    :param verify_ssl: verify SSL certificates for HTTPS requests, defaults to
-        False
-    :type verify_ssl: bool
+    :param ssl_context: Forward the SSL context for HTTPS requests, defaults to
+        ssl.create_default_context()
+    :type ssl_context: ssl.SSLContext
     :param timeout: number of seconds Requests will wait for your client to
         establish a connection, defaults to None
     :type timeout: int
@@ -75,11 +74,6 @@ class InfluxDBClient(object):
     :type proxies: dict
     :param path: path of InfluxDB on the server to connect, defaults to ''
     :type path: str
-    :param cert: Path to client certificate information to use for mutual TLS
-        authentication. You can specify a local cert to use
-        as a single file containing the private key and the certificate, or as
-        a tuple of both files’ paths, defaults to None
-    :type cert: str
     :param gzip: use gzip content encoding to compress requests
     :type gzip: bool
     :param session: allow for the new client request to use an existing
@@ -93,7 +87,7 @@ class InfluxDBClient(object):
         ``HTTPConnection.default_socket_options``
     :type socket_options: list
 
-    :raises ValueError: if cert is provided but ssl is disabled (set to False)
+    :raises ValueError: if ssl_usage is disabled but the ssl context is provided (set to False)
     """
 
     def __init__(self,
@@ -102,8 +96,8 @@ class InfluxDBClient(object):
                  username='root',
                  password='root',
                  database=None,
-                 ssl=False,
-                 verify_ssl=False,
+                 ssl_usage=False,
+                 ssl_context=None,
                  timeout=None,
                  retries=3,
                  use_udp=False,
@@ -111,7 +105,6 @@ class InfluxDBClient(object):
                  proxies=None,
                  pool_size=10,
                  path='',
-                 cert=None,
                  gzip=False,
                  session=None,
                  headers=None,
@@ -125,21 +118,17 @@ class InfluxDBClient(object):
         self._database = database
         self._timeout = timeout
         self._retries = retries
-
-        self._verify_ssl = verify_ssl
+        self._ssl_context = ssl.create_default_context() if ssl_context is None else ssl_context
 
         self.__use_udp = use_udp
         self.__udp_port = int(udp_port)
 
         if not session:
-            session = requests.Session()
+            # TODO Check the socket options part
+            session = urllib3.PoolManager(ssl_context=self._ssl_context, num_pools=int(pool_size),
+                                          **{"socket_options": socket_options})
 
         self._session = session
-        adapter = _SocketOptionsAdapter(
-            pool_connections=int(pool_size),
-            pool_maxsize=int(pool_size),
-            socket_options=socket_options
-        )
 
         if use_udp:
             self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -153,23 +142,18 @@ class InfluxDBClient(object):
 
         self._scheme = "http"
 
-        if ssl is True:
+        if ssl_usage is True:
             self._scheme = "https"
-
-        self._session.mount(self._scheme + '://', adapter)
 
         if proxies is None:
             self._proxies = {}
         else:
             self._proxies = proxies
 
-        if cert:
-            if not ssl:
-                raise ValueError(
-                    "Client certificate provided but ssl is disabled."
-                )
-            else:
-                self._session.cert = cert
+        if ssl_context is not None and ssl_usage is False:
+            raise ValueError(
+                "SSL context provided but ssl is disabled."
+            )
 
         self.__baseurl = "{0}://{1}:{2}{3}".format(
             self._scheme,
@@ -324,9 +308,9 @@ class InfluxDBClient(object):
                 # For Py 2.7 compatability use Gzipfile
                 compressed = io.BytesIO()
                 with gzip.GzipFile(
-                    compresslevel=9,
-                    fileobj=compressed,
-                    mode='w'
+                        compresslevel=9,
+                        fileobj=compressed,
+                        mode='w'
                 ) as f:
                     f.write(data)
                 data = compressed.getvalue()
@@ -336,26 +320,25 @@ class InfluxDBClient(object):
         _try = 0
         while retry:
             try:
-                if "Authorization" in headers:
-                    auth = (None, None)
-                else:
-                    auth = (self._username, self._password)
-                response = self._session.request(
+                if "Authorization" not in headers:
+                    headers.update(urllib3.make_headers(basic_auth=f"{self._username}:{self._password}"))
+
+                # TODO Adjust the requests settings proxies | timeout | stream
+                # TODO Adjust the flux v2 support for post requests
+
+                response: urllib3.response.BaseHTTPResponse = self._session.request(
                     method=method,
-                    url=url,
-                    auth=auth if None not in auth else None,
-                    params=params,
-                    data=data,
-                    stream=stream,
+                    url=f"{url}?db={params['db']}" if method == "POST" else url,
+                    fields=params if method == "GET" else None,
+                    body=data,
                     headers=headers,
                     proxies=self._proxies,
-                    verify=self._verify_ssl,
-                    timeout=self._timeout
+                    timeout=self._timeout,
                 )
                 break
-            except (requests.exceptions.ConnectionError,
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.Timeout):
+            except (urllib3.exceptions.ConnectionError,
+                    urllib3.exceptions.HTTPError,
+                    urllib3.exceptions.TimeoutError):
                 _try += 1
                 if self._retries != 0:
                     retry = _try < self._retries
@@ -365,9 +348,9 @@ class InfluxDBClient(object):
                     time.sleep((2 ** _try) * random.random() / 100.0)
 
         type_header = response.headers and response.headers.get("Content-Type")
-        if type_header == "application/x-msgpack" and response.content:
+        if type_header == "application/x-msgpack" and response.data:
             response._msgpack = msgpack.unpackb(
-                packed=response.content,
+                packed=response.data,
                 ext_hook=_msgpack_parse_hook,
                 raw=False)
         else:
@@ -380,13 +363,13 @@ class InfluxDBClient(object):
                 return response.content
 
         # if there's not an error, there must have been a successful response
-        if 500 <= response.status_code < 600:
+        if 500 <= response.status < 600:
             raise InfluxDBServerError(reformat_error(response))
-        elif response.status_code == expected_response_code:
+        elif response.status == expected_response_code:
             return response
         else:
             err_msg = reformat_error(response)
-            raise InfluxDBClientError(err_msg, response.status_code)
+            raise InfluxDBClientError(err_msg, response.status)
 
     def write(self, data, params=None, expected_response_code=204,
               protocol='json'):
@@ -1182,7 +1165,7 @@ class InfluxDBClient(object):
         self.query(query_string)
 
     def send_packet(self, packet, protocol='json', time_precision=None):
-        """Send an UDP packet.
+        """Send a UDP packet.
 
         :param packet: the packet to be sent
         :type packet: (if protocol is 'json') dict
@@ -1200,8 +1183,8 @@ class InfluxDBClient(object):
 
     def close(self):
         """Close http session."""
-        if isinstance(self._session, requests.Session):
-            self._session.close()
+        if isinstance(self._session, urllib3.PoolManager):
+            self._session.clear()
 
 
 def _parse_dsn(dsn):
@@ -1260,16 +1243,3 @@ def _msgpack_parse_hook(code, data):
         timestamp += datetime.timedelta(microseconds=(epoch_ns / 1000))
         return timestamp.isoformat() + 'Z'
     return msgpack.ExtType(code, data)
-
-
-class _SocketOptionsAdapter(HTTPAdapter):
-    """_SocketOptionsAdapter injects socket_options into HTTP Adapter."""
-
-    def __init__(self, *args, **kwargs):
-        self.socket_options = kwargs.pop("socket_options", None)
-        super(_SocketOptionsAdapter, self).__init__(*args, **kwargs)
-
-    def init_poolmanager(self, *args, **kwargs):
-        if self.socket_options is not None:
-            kwargs["socket_options"] = self.socket_options
-        super(_SocketOptionsAdapter, self).init_poolmanager(*args, **kwargs)

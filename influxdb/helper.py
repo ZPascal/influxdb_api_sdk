@@ -10,8 +10,6 @@ from collections import namedtuple, defaultdict
 from datetime import datetime
 from warnings import warn
 
-import six
-
 
 class SeriesHelper(object):
     """Subclass this helper eases writing data points in bulk.
@@ -173,10 +171,11 @@ class SeriesHelper(object):
 
         :return: JSON body of these datapoints.
         """
+
         json = []
         if not cls.__initialized__:
             cls._reset_()
-        for series_name, data in six.iteritems(cls._datapoints):
+        for series_name, data in iter(cls._datapoints.items()):
             for point in data:
                 json_point = {
                     "measurement": series_name,

@@ -1,0 +1,10 @@
+docs_dir: content
+markdown_extensions:
+- pymdownx.tasklist
+nav:
+- Home: index.md
+- API SDK:
+  - Model: grafana_api/model.md
+repo_url: https://github.com/ZPascal/influxdb_api_sdk
+site_name: InfluxDB API SDK
+theme: material
