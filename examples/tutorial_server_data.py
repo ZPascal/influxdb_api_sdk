@@ -11,12 +11,12 @@ import time
 from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
-USER = 'root'
-PASSWORD = 'root'
-DBNAME = 'tutorial'
+USER = "root"
+PASSWORD = "root"
+DBNAME = "tutorial"
 
 
-def main(host='localhost', port=8086, nb_day=15):
+def main(host="localhost", port=8086, nb_day=15):
     """Instantiate a connection to the backend."""
     nb_day = 15  # number of day to generate time series
     timeinterval_min = 5  # create an event every x minutes
@@ -32,7 +32,7 @@ def main(host='localhost', port=8086, nb_day=15):
         hostName = "server-%d" % random.randint(1, 5)
         # pointValues = [int(past_date.strftime('%s')), value, hostName]
         pointValues = {
-            "time": int(past_date.strftime('%s')),
+            "time": int(past_date.strftime("%s")),
             "measurement": metric,
             "fields": {
                 "value": value,
@@ -56,8 +56,8 @@ def main(host='localhost', port=8086, nb_day=15):
         client.create_database(DBNAME)
 
     print("Create a retention policy")
-    retention_policy = 'server_data'
-    client.create_retention_policy(retention_policy, '3d', 3, default=True)
+    retention_policy = "server_data"
+    client.create_retention_policy(retention_policy, "3d", 3, default=True)
 
     print("Write points #: {0}".format(total_records))
     client.write_points(series, retention_policy=retention_policy)
@@ -76,18 +76,15 @@ def main(host='localhost', port=8086, nb_day=15):
 
 def parse_args():
     """Parse the args."""
-    parser = argparse.ArgumentParser(
-        description='example code to play with InfluxDB')
-    parser.add_argument('--host', type=str, required=False,
-                        default='localhost',
-                        help='hostname influxdb http API')
-    parser.add_argument('--port', type=int, required=False, default=8086,
-                        help='port influxdb http API')
-    parser.add_argument('--nb_day', type=int, required=False, default=15,
-                        help='number of days to generate time series data')
+    parser = argparse.ArgumentParser(description="example code to play with InfluxDB")
+    parser.add_argument("--host", type=str, required=False, default="localhost", help="hostname influxdb http API")
+    parser.add_argument("--port", type=int, required=False, default=8086, help="port influxdb http API")
+    parser.add_argument(
+        "--nb_day", type=int, required=False, default=15, help="number of days to generate time series data"
+    )
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     main(host=args.host, port=args.port, nb_day=args.nb_day)

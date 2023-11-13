@@ -5,10 +5,9 @@ import argparse
 from influxdb import InfluxDBClient
 
 
-def main(token='my-token'):
+def main(token="my-token"):
     """Instantiate a connection to the InfluxDB."""
-    client = InfluxDBClient(username=None, password=None,
-                            headers={"Authorization": token})
+    client = InfluxDBClient(username=None, password=None, headers={"Authorization": token})
 
     print("Use authorization token: " + token)
 
@@ -19,14 +18,17 @@ def main(token='my-token'):
 
 def parse_args():
     """Parse the args from main."""
-    parser = argparse.ArgumentParser(
-        description='example code to play with InfluxDB')
-    parser.add_argument('--token', type=str, required=False,
-                        default='my-token',
-                        help='Authorization token for the proxy that is ahead the InfluxDB.')
+    parser = argparse.ArgumentParser(description="example code to play with InfluxDB")
+    parser.add_argument(
+        "--token",
+        type=str,
+        required=False,
+        default="my-token",
+        help="Authorization token for the proxy that is ahead the InfluxDB.",
+    )
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     main(token=args.token)

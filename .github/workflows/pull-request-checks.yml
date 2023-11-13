@@ -1,0 +1,160 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  pr-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Install the requirements
+        run: uv sync --extra test
+
+      - name: Execute the unittests
+        run: export PYTHONPATH=$PWD && uv run --extra test pytest tests/unittests
+
+  pr-lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.12" ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Execute the linting checks
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "check"
+
+  pr-coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.12" ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Install the requirements
+        run: uv sync --extra test
+
+      - name: Generate the coverage report
+        run: export PYTHONPATH=$PWD && uv run --extra test pytest --junitxml=pytest.xml --cov=. --cov-report=term-missing --cov-report=xml:reports/coverage/coverage.xml tests/unittests
+
+      - name: Generate coverage badge
+        run: uv run --extra test genbadge coverage -o docs/coverage.svg
+
+      - name: Check changed files
+        uses: ZPascal/check-changed-files-action@v1
+        id: verify-changed-files
+        with:
+          checked_location: 'docs'
+          git_location: './'
+
+      - name: Commit files
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add --force docs
+          git commit -m "docs: Add coverage badge"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
+          atomic: false
+
+  pr-documentation:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+          cache: 'pip'
+
+      - name: Install the requirements
+        run: pip install pydoc-markdown==4.6.3 mkdocs mkdocs-material
+
+      - name: Generate documentation
+        run: pydoc-markdown --render-toc && rm -rf docs/content && mv build/docs/* docs
+
+      - name: Check changed files
+        uses: ZPascal/check-changed-files-action@v1
+        id: verify-changed-files
+        with:
+          checked_location: 'docs'
+          git_location: './'
+
+      - name: Commit files
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add --force docs
+          git commit -m "docs: Add the documentation"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
