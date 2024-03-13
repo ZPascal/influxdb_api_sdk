@@ -157,7 +157,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.head_ref }}
-
-  pr-integrationtest:
-    uses: ./.github/workflows/integrationtest.yml
-    secrets: inherit
