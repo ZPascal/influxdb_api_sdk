@@ -19,7 +19,7 @@ class ResultSet(object):
     def __init__(self, series, raise_errors=True):
         """Initialize the ResultSet."""
         self._raw = series
-        self._error = self._raw.get('error', None)
+        self._error = self._raw.get("error", None)
 
         if self.error is not None and raise_errors is True:
             raise InfluxDBClientError(self.error)
@@ -54,20 +54,22 @@ class ResultSet(object):
         it might change..
         """
         warnings.warn(
-            ("ResultSet's ``__getitem__`` method will be deprecated. Use"
-             "``get_points`` instead."),
-            DeprecationWarning
+            (
+                "ResultSet's ``__getitem__`` method will be deprecated. Use"
+                "``get_points`` instead."
+            ),
+            DeprecationWarning,
         )
 
         if isinstance(key, tuple):
             if len(key) != 2:
-                raise TypeError('only 2-tuples allowed')
+                raise TypeError("only 2-tuples allowed")
 
             name = key[0]
             tags = key[1]
 
             if not isinstance(tags, dict) and tags is not None:
-                raise TypeError('tags should be a dict')
+                raise TypeError("tags should be a dict")
         elif isinstance(key, dict):
             name = None
             tags = key
@@ -89,13 +91,11 @@ class ResultSet(object):
         :return: Points generator
         """
         # Raise error if measurement is not str or bytes
-        if not isinstance(measurement,
-                          (bytes, type(b''.decode()), type(None))):
-            raise TypeError('measurement must be an str or None')
+        if not isinstance(measurement, (bytes, type(b"".decode()), type(None))):
+            raise TypeError("measurement must be an str or None")
 
         for series in self._get_series():
-            series_name = series.get('measurement',
-                                     series.get('name', 'results'))
+            series_name = series.get("measurement", series.get("name", "results"))
             if series_name is None:
                 # this is a "system" query or a query which
                 # doesn't return a name attribute.
@@ -107,11 +107,13 @@ class ResultSet(object):
             elif measurement in (None, series_name):
                 # by default if no tags was provided then
                 # we will matches every returned series
-                series_tags = series.get('tags', {})
+                series_tags = series.get("tags", {})
                 for item in self._get_points_for_series(series):
-                    if tags is None or \
-                            self._tag_matches(item, tags) or \
-                            self._tag_matches(series_tags, tags):
+                    if (
+                        tags is None
+                        or self._tag_matches(item, tags)
+                        or self._tag_matches(series_tags, tags)
+                    ):
                         yield item
 
     def __repr__(self):
@@ -144,7 +146,7 @@ class ResultSet(object):
 
     def _get_series(self):
         """Return all series."""
-        return self.raw.get('series', [])
+        return self.raw.get("series", [])
 
     def __len__(self):
         """Return the len of the keys in the ResultSet."""
@@ -158,9 +160,10 @@ class ResultSet(object):
         keys = []
         for series in self._get_series():
             keys.append(
-                (series.get('measurement',
-                            series.get('name', 'results')),
-                 series.get('tags', None))
+                (
+                    series.get("measurement", series.get("name", "results")),
+                    series.get("tags", None),
+                )
             )
         return keys
 
@@ -171,12 +174,11 @@ class ResultSet(object):
         """
         items = []
         for series in self._get_series():
-            series_key = (series.get('measurement',
-                                     series.get('name', 'results')),
-                          series.get('tags', None))
-            items.append(
-                (series_key, self._get_points_for_series(series))
+            series_key = (
+                series.get("measurement", series.get("name", "results")),
+                series.get("tags", None),
             )
+            items.append((series_key, self._get_points_for_series(series)))
         return items
 
     def _get_points_for_series(self, series):
@@ -185,11 +187,8 @@ class ResultSet(object):
         :param series: One series
         :return: Generator of dicts
         """
-        for point in series.get('values', []):
-            yield self.point_from_cols_vals(
-                series['columns'],
-                point
-            )
+        for point in series.get("values", []):
+            yield self.point_from_cols_vals(series["columns"], point)
 
     @staticmethod
     def point_from_cols_vals(cols, vals):

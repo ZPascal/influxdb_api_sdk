@@ -9,7 +9,7 @@ from __future__ import unicode_literals
 import socket
 
 
-def get_free_ports(num_ports, ip='127.0.0.1'):
+def get_free_ports(num_ports, ip="127.0.0.1"):
     """Determine free ports on provided interface.
 
     Get `num_ports` free/available ports on the interface linked to the `ip`
@@ -38,7 +38,7 @@ def get_free_ports(num_ports, ip='127.0.0.1'):
     return ports
 
 
-def is_port_open(port, ip='127.0.0.1'):
+def is_port_open(port, ip="127.0.0.1"):
     """Check if given TCP port is open for connection."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:

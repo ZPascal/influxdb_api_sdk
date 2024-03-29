@@ -4,15 +4,16 @@
 import warnings
 
 import json
+import ssl
 import socket
-import requests
-import requests.exceptions
-from six.moves import xrange
-from six.moves.urllib.parse import urlparse
+import urllib3
+from urllib3.exceptions import ConnectionError, TimeoutError
+
+from urllib.parse import urlparse
 
 from influxdb import chunked_json
 
-session = requests.Session()
+session = urllib3.PoolManager()
 
 
 class InfluxDBClientError(Exception):
@@ -20,8 +21,7 @@ class InfluxDBClientError(Exception):
 
     def __init__(self, content, code=-1):
         """Initialize an InfluxDBClientError handler."""
-        super(InfluxDBClientError, self).__init__(
-            "{0}: {1}".format(code, content))
+        super(InfluxDBClientError, self).__init__("{0}: {1}".format(code, content))
         self.content = content
         self.code = code
 
@@ -42,12 +42,12 @@ class InfluxDBClient(object):
     :type password: string
     :param database: database name to connect to, defaults is None
     :type database: string
-    :param ssl: use https instead of http to connect to InfluxDB, defaults is
+    :param ssl_usage: use https instead of http to connect to InfluxDB, defaults to
         False
-    :type ssl: boolean
-    :param verify_ssl: verify SSL certificates for HTTPS requests, defaults is
-        False
-    :type verify_ssl: boolean
+    :type ssl_usage: bool
+    :param ssl_context: Forward the SSL context for HTTPS requests, defaults to
+        ssl.create_default_context()
+    :type ssl_context: ssl.SSLContext
     :param retries: number of retries your client will try before aborting,
         defaults to 3. 0 indicates try until success
     :type retries: int
@@ -58,53 +58,78 @@ class InfluxDBClient(object):
     :type use_udp: int
     :param udp_port: UDP port to connect to InfluxDB, defaults is 4444
     :type udp_port: int
+    :param pool_size: urllib3 connection pool size, defaults to 10.
+    :type pool_size: int
+    :param session: allow for the new client request to use an existing
+    requests Session, defaults to None
+    :type session: requests.Session
+    :param socket_options: use custom tcp socket options,
+    If not specified, then defaults are loaded from
+    ``HTTPConnection.default_socket_options``
+    :type socket_options: list
     """
 
-    def __init__(self,
-                 host='localhost',
-                 port=8086,
-                 username='root',
-                 password='root',
-                 database=None,
-                 ssl=False,
-                 verify_ssl=False,
-                 timeout=None,
-                 retries=3,
-                 use_udp=False,
-                 udp_port=4444):
+    def __init__(
+        self,
+        host="localhost",
+        port=8086,
+        username="root",
+        password="root",
+        database=None,
+        ssl_usage=False,
+        ssl_context=None,
+        timeout=None,
+        retries=3,
+        use_udp=False,
+        udp_port=4444,
+        pool_size=10,
+        session=None,
+        socket_options=None,
+    ):
         """Construct a new InfluxDBClient object."""
         self._host = host
-        self._port = port
+        self._port = int(port)
         self._username = username
         self._password = password
         self._database = database
         self._timeout = timeout
         self._retries = retries
 
-        self._verify_ssl = verify_ssl
+        self._ssl_context = (
+            ssl.create_default_context() if ssl_context is None else ssl_context
+        )
 
         self._use_udp = use_udp
         self._udp_port = udp_port
+
+        if not session:
+            # TODO Check the socket options part
+            session = urllib3.PoolManager(
+                ssl_context=self._ssl_context,
+                num_pools=int(pool_size),
+                **{"socket_options": socket_options}
+            )
+
+        self._session = session
+
         if use_udp:
             self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self._scheme = "http"
 
-        if ssl is True:
+        if ssl_usage is True:
             self._scheme = "https"
 
-        self._baseurl = "{0}://{1}:{2}".format(
-            self._scheme,
-            self._host,
-            self._port)
+        if ssl_context is not None and ssl_usage is False:
+            raise ValueError("SSL context provided but ssl is disabled.")
 
-        self._headers = {
-            'Content-type': 'application/json',
-            'Accept': 'text/plain'}
+        self._baseurl = "{0}://{1}:{2}".format(self._scheme, self._host, self._port)
+
+        self._headers = {"Content-type": "application/json", "Accept": "text/plain"}
 
     @staticmethod
     def from_dsn(dsn, **kwargs):
-        r"""Return an instaance of InfluxDBClient from given data source name.
+        r"""Return an instance of InfluxDBClient from given data source name.
 
         Returns an instance of InfluxDBClient from the provided data source
         name. Supported schemes are "influxdb", "https+influxdb",
@@ -134,7 +159,7 @@ class InfluxDBClient(object):
         """
         init_args = {}
         conn_params = urlparse(dsn)
-        scheme_info = conn_params.scheme.split('+')
+        scheme_info = conn_params.scheme.split("+")
 
         if len(scheme_info) == 1:
             scheme = scheme_info[0]
@@ -142,27 +167,27 @@ class InfluxDBClient(object):
         else:
             modifier, scheme = scheme_info
 
-        if scheme != 'influxdb':
+        if scheme != "influxdb":
             raise ValueError('Unknown scheme "{0}".'.format(scheme))
 
         if modifier:
-            if modifier == 'udp':
-                init_args['use_udp'] = True
-            elif modifier == 'https':
-                init_args['ssl'] = True
+            if modifier == "udp":
+                init_args["use_udp"] = True
+            elif modifier == "https":
+                init_args["ssl"] = True
             else:
                 raise ValueError('Unknown modifier "{0}".'.format(modifier))
 
         if conn_params.hostname:
-            init_args['host'] = conn_params.hostname
+            init_args["host"] = conn_params.hostname
         if conn_params.port:
-            init_args['port'] = conn_params.port
+            init_args["port"] = conn_params.port
         if conn_params.username:
-            init_args['username'] = conn_params.username
+            init_args["username"] = conn_params.username
         if conn_params.password:
-            init_args['password'] = conn_params.password
+            init_args["password"] = conn_params.password
         if conn_params.path and len(conn_params.path) > 1:
-            init_args['database'] = conn_params.path[1:]
+            init_args["database"] = conn_params.path[1:]
 
         init_args.update(kwargs)
 
@@ -187,7 +212,8 @@ class InfluxDBClient(object):
             "switch_db is deprecated, and will be removed "
             "in future versions. Please use "
             "``InfluxDBClient.switch_database(database)`` instead.",
-            FutureWarning)
+            FutureWarning,
+        )
         return self.switch_database(database)
 
     def switch_user(self, username, password):
@@ -201,18 +227,16 @@ class InfluxDBClient(object):
         self._username = username
         self._password = password
 
-    def request(self, url, method='GET', params=None, data=None,
-                expected_response_code=200):
+    def request(
+        self, url, method="GET", params=None, data=None, expected_response_code=200
+    ):
         """Make a http request to API."""
         url = "{0}/{1}".format(self._baseurl, url)
 
         if params is None:
             params = {}
 
-        auth = {
-            'u': self._username,
-            'p': self._password
-        }
+        auth = {"u": self._username, "p": self._password}
 
         params.update(auth)
 
@@ -224,37 +248,39 @@ class InfluxDBClient(object):
         # Try to send the request more than once by default (see #103)
         while retry:
             try:
-                response = session.request(
+                response: urllib3.response.BaseHTTPResponse = self._session.request(
                     method=method,
-                    url=url,
-                    params=params,
-                    data=data,
+                    url=(
+                        "{0}?db={1}".format(url, params["db"])
+                        if method == "POST"
+                        else url
+                    ),
+                    fields=params if method == "GET" else None,
+                    body=data,
                     headers=self._headers,
-                    verify=self._verify_ssl,
-                    timeout=self._timeout
+                    timeout=self._timeout,
                 )
                 break
-            except (requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout):
+            except (ConnectionError, TimeoutError):
                 _try += 1
                 if self._retries != 0:
                     retry = _try < self._retries
         else:
-            raise requests.exceptions.ConnectionError
+            raise ConnectionError
 
-        if response.status_code == expected_response_code:
+        if response.status == expected_response_code:
             return response
         else:
-            raise InfluxDBClientError(response.content, response.status_code)
+            raise InfluxDBClientError(response.data, response.status)
 
     def write(self, data):
         """Provide as convenience for influxdb v0.9.0, this may change."""
         self.request(
             url="write",
-            method='POST',
+            method="POST",
             params=None,
             data=data,
-            expected_response_code=200
+            expected_response_code=200,
         )
         return True
 
@@ -264,7 +290,7 @@ class InfluxDBClient(object):
     # by doing a POST to /db/foo_production/series?u=some_user&p=some_password
     # with a JSON body of points.
 
-    def write_points(self, data, time_precision='s', *args, **kwargs):
+    def write_points(self, data, time_precision="s", *args, **kwargs):
         """Write to multiple time series names.
 
         An example data blob is:
@@ -292,33 +318,27 @@ class InfluxDBClient(object):
         :type batch_size: int
 
         """
+
         def list_chunks(data_list, n):
             """Yield successive n-sized chunks from l."""
-            for i in xrange(0, len(data_list), n):
-                yield data_list[i:i + n]
+            for i in range(0, len(data_list), n):
+                yield data_list[i : i + n]
 
-        batch_size = kwargs.get('batch_size')
+        batch_size = kwargs.get("batch_size")
         if batch_size and batch_size > 0:
             for item in data:
-                name = item.get('name')
-                columns = item.get('columns')
-                point_list = item.get('points', [])
+                name = item.get("name")
+                columns = item.get("columns")
+                point_list = item.get("points", [])
 
                 for batch in list_chunks(point_list, batch_size):
-                    item = [{
-                        "points": batch,
-                        "name": name,
-                        "columns": columns
-                    }]
-                    self._write_points(
-                        data=item,
-                        time_precision=time_precision)
+                    item = [{"points": batch, "name": name, "columns": columns}]
+                    self._write_points(data=item, time_precision=time_precision)
             return True
 
-        return self._write_points(data=data,
-                                  time_precision=time_precision)
+        return self._write_points(data=data, time_precision=time_precision)
 
-    def write_points_with_precision(self, data, time_precision='s'):
+    def write_points_with_precision(self, data, time_precision="s"):
         """Write to multiple time series names.
 
         DEPRECATED.
@@ -327,34 +347,32 @@ class InfluxDBClient(object):
             "write_points_with_precision is deprecated, and will be removed "
             "in future versions. Please use "
             "``InfluxDBClient.write_points(time_precision='..')`` instead.",
-            FutureWarning)
+            FutureWarning,
+        )
         return self._write_points(data=data, time_precision=time_precision)
 
     def _write_points(self, data, time_precision):
-        if time_precision not in ['s', 'm', 'ms', 'u']:
+        if time_precision not in ["s", "m", "ms", "u"]:
             raise Exception(
-                "Invalid time precision is given. (use 's', 'm', 'ms' or 'u')")
-
-        if self._use_udp and time_precision != 's':
-            raise Exception(
-                "InfluxDB only supports seconds precision for udp writes"
+                "Invalid time precision is given. (use 's', 'm', 'ms' or 'u')"
             )
+
+        if self._use_udp and time_precision != "s":
+            raise Exception("InfluxDB only supports seconds precision for udp writes")
 
         url = "db/{0}/series".format(self._database)
 
-        params = {
-            'time_precision': time_precision
-        }
+        params = {"time_precision": time_precision}
 
         if self._use_udp:
             self.send_packet(data)
         else:
             self.request(
                 url=url,
-                method='POST',
+                method="POST",
                 params=params,
                 data=data,
-                expected_response_code=200
+                expected_response_code=200,
             )
 
         return True
@@ -365,11 +383,7 @@ class InfluxDBClient(object):
         """Delete an entire series."""
         url = "db/{0}/series/{1}".format(self._database, name)
 
-        self.request(
-            url=url,
-            method='DELETE',
-            expected_response_code=204
-        )
+        self.request(url=url, method="DELETE", expected_response_code=204)
 
         return True
 
@@ -411,7 +425,7 @@ class InfluxDBClient(object):
         """
         raise NotImplementedError()
 
-    def query(self, query, time_precision='s', chunked=False):
+    def query(self, query, time_precision="s", chunked=False):
         """Query data from the influxdb v0.8 database.
 
         :param time_precision: [Optional, default 's'] Either 's', 'm', 'ms'
@@ -419,43 +433,40 @@ class InfluxDBClient(object):
         :param chunked: [Optional, default=False] True if the data shall be
             retrieved in chunks, False otherwise.
         """
-        return self._query(query, time_precision=time_precision,
-                           chunked=chunked)
+        return self._query(query, time_precision=time_precision, chunked=chunked)
 
     # Querying Data
     #
     # GET db/:name/series. It takes five parameters
-    def _query(self, query, time_precision='s', chunked=False):
-        if time_precision not in ['s', 'm', 'ms', 'u']:
+    def _query(self, query, time_precision="s", chunked=False):
+        if time_precision not in ["s", "m", "ms", "u"]:
             raise Exception(
-                "Invalid time precision is given. (use 's', 'm', 'ms' or 'u')")
+                "Invalid time precision is given. (use 's', 'm', 'ms' or 'u')"
+            )
 
         if chunked is True:
-            chunked_param = 'true'
+            chunked_param = "true"
         else:
-            chunked_param = 'false'
+            chunked_param = "false"
 
         # Build the URL of the series to query
         url = "db/{0}/series".format(self._database)
 
         params = {
-            'q': query,
-            'time_precision': time_precision,
-            'chunked': chunked_param
+            "q": query,
+            "time_precision": time_precision,
+            "chunked": chunked_param,
         }
 
         response = self.request(
-            url=url,
-            method='GET',
-            params=params,
-            expected_response_code=200
+            url=url, method="GET", params=params, expected_response_code=200
         )
 
         if chunked:
             try:
-                decoded = chunked_json.loads(response.content.decode())
+                decoded = chunked_json.loads(response.data.decode())
             except UnicodeDecodeError:
-                decoded = chunked_json.loads(response.content.decode('utf-8'))
+                decoded = chunked_json.loads(response.data.decode("utf-8"))
 
             return list(decoded)
 
@@ -478,14 +489,9 @@ class InfluxDBClient(object):
         """
         url = "db"
 
-        data = {'name': database}
+        data = {"name": database}
 
-        self.request(
-            url=url,
-            method='POST',
-            data=data,
-            expected_response_code=201
-        )
+        self.request(url=url, method="POST", data=data, expected_response_code=201)
 
         return True
 
@@ -498,11 +504,7 @@ class InfluxDBClient(object):
         """
         url = "db/{0}".format(database)
 
-        self.request(
-            url=url,
-            method='DELETE',
-            expected_response_code=204
-        )
+        self.request(url=url, method="DELETE", expected_response_code=204)
 
         return True
 
@@ -513,11 +515,7 @@ class InfluxDBClient(object):
         """Get the list of databases."""
         url = "db"
 
-        response = self.request(
-            url=url,
-            method='GET',
-            expected_response_code=200
-        )
+        response = self.request(url=url, method="GET", expected_response_code=200)
 
         return response.json()
 
@@ -530,7 +528,8 @@ class InfluxDBClient(object):
             "get_database_list is deprecated, and will be removed "
             "in future versions. Please use "
             "``InfluxDBClient.get_list_database`` instead.",
-            FutureWarning)
+            FutureWarning,
+        )
         return self.get_list_database()
 
     def delete_series(self, series):
@@ -540,28 +539,21 @@ class InfluxDBClient(object):
         :type series: string
         :rtype: boolean
         """
-        url = "db/{0}/series/{1}".format(
-            self._database,
-            series
-        )
+        url = "db/{0}/series/{1}".format(self._database, series)
 
-        self.request(
-            url=url,
-            method='DELETE',
-            expected_response_code=204
-        )
+        self.request(url=url, method="DELETE", expected_response_code=204)
 
         return True
 
     def get_list_series(self):
         """Get a list of all time series in a database."""
-        response = self._query('list series')
-        return [series[1] for series in response[0]['points']]
+        response = self._query("list series")
+        return [series[1] for series in response[0]["points"]]
 
     def get_list_continuous_queries(self):
         """Get a list of continuous queries."""
-        response = self._query('list continuous queries')
-        return [query[2] for query in response[0]['points']]
+        response = self._query("list continuous queries")
+        return [query[2] for query in response[0]["points"]]
 
     # Security
     # get list of cluster admins
@@ -597,25 +589,17 @@ class InfluxDBClient(object):
     def get_list_cluster_admins(self):
         """Get list of cluster admins."""
         response = self.request(
-            url="cluster_admins",
-            method='GET',
-            expected_response_code=200
+            url="cluster_admins", method="GET", expected_response_code=200
         )
 
         return response.json()
 
     def add_cluster_admin(self, new_username, new_password):
         """Add cluster admin."""
-        data = {
-            'name': new_username,
-            'password': new_password
-        }
+        data = {"name": new_username, "password": new_password}
 
         self.request(
-            url="cluster_admins",
-            method='POST',
-            data=data,
-            expected_response_code=200
+            url="cluster_admins", method="POST", data=data, expected_response_code=200
         )
 
         return True
@@ -624,16 +608,9 @@ class InfluxDBClient(object):
         """Update cluster admin password."""
         url = "cluster_admins/{0}".format(username)
 
-        data = {
-            'password': new_password
-        }
+        data = {"password": new_password}
 
-        self.request(
-            url=url,
-            method='POST',
-            data=data,
-            expected_response_code=200
-        )
+        self.request(url=url, method="POST", data=data, expected_response_code=200)
 
         return True
 
@@ -641,11 +618,7 @@ class InfluxDBClient(object):
         """Delete cluster admin."""
         url = "cluster_admins/{0}".format(username)
 
-        self.request(
-            url=url,
-            method='DELETE',
-            expected_response_code=200
-        )
+        self.request(url=url, method="DELETE", expected_response_code=200)
 
         return True
 
@@ -661,14 +634,9 @@ class InfluxDBClient(object):
         """Alter the database admin."""
         url = "db/{0}/users/{1}".format(self._database, username)
 
-        data = {'admin': is_admin}
+        data = {"admin": is_admin}
 
-        self.request(
-            url=url,
-            method='POST',
-            data=data,
-            expected_response_code=200
-        )
+        self.request(url=url, method="POST", data=data, expected_response_code=200)
 
         return True
 
@@ -734,11 +702,7 @@ class InfluxDBClient(object):
         """Get list of database users."""
         url = "db/{0}/users".format(self._database)
 
-        response = self.request(
-            url=url,
-            method='GET',
-            expected_response_code=200
-        )
+        response = self.request(url=url, method="GET", expected_response_code=200)
 
         return response.json()
 
@@ -749,25 +713,15 @@ class InfluxDBClient(object):
         """
         url = "db/{0}/users".format(self._database)
 
-        data = {
-            'name': new_username,
-            'password': new_password
-        }
+        data = {"name": new_username, "password": new_password}
 
         if permissions:
             try:
-                data['readFrom'], data['writeTo'] = permissions
+                data["readFrom"], data["writeTo"] = permissions
             except (ValueError, TypeError):
-                raise TypeError(
-                    "'permissions' must be (readFrom, writeTo) tuple"
-                )
+                raise TypeError("'permissions' must be (readFrom, writeTo) tuple")
 
-        self.request(
-            url=url,
-            method='POST',
-            data=data,
-            expected_response_code=200
-        )
+        self.request(url=url, method="POST", data=data, expected_response_code=200)
 
         return True
 
@@ -790,22 +744,15 @@ class InfluxDBClient(object):
         data = {}
 
         if password:
-            data['password'] = password
+            data["password"] = password
 
         if permissions:
             try:
-                data['readFrom'], data['writeTo'] = permissions
+                data["readFrom"], data["writeTo"] = permissions
             except (ValueError, TypeError):
-                raise TypeError(
-                    "'permissions' must be (readFrom, writeTo) tuple"
-                )
+                raise TypeError("'permissions' must be (readFrom, writeTo) tuple")
 
-        self.request(
-            url=url,
-            method='POST',
-            data=data,
-            expected_response_code=200
-        )
+        self.request(url=url, method="POST", data=data, expected_response_code=200)
 
         if username == self._username:
             self._password = password
@@ -816,11 +763,7 @@ class InfluxDBClient(object):
         """Delete database user."""
         url = "db/{0}/users/{1}".format(self._database, username)
 
-        self.request(
-            url=url,
-            method='DELETE',
-            expected_response_code=200
-        )
+        self.request(url=url, method="DELETE", expected_response_code=200)
 
         return True
 
@@ -839,5 +782,5 @@ class InfluxDBClient(object):
     def send_packet(self, packet):
         """Send a UDP packet along the wire."""
         data = json.dumps(packet)
-        byte = data.encode('utf-8')
+        byte = data.encode("utf-8")
         self.udp_socket.sendto(byte, (self._host, self._udp_port))

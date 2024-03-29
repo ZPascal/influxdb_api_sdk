@@ -28,6 +28,6 @@ setuptools.setup(
     license="Apache-2.0 License",
     packages=["influxdb"],
     install_requires=["python-dateutil", "pytz", "urllib3", "msgpack"],
-    tests_require=["pytest", "pandas"],
+    tests_require=["pytest", "pandas", "numpy"],
     python_requires=">=3.8",
 )

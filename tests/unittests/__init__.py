@@ -14,8 +14,5 @@ import unittest
 using_pypy = hasattr(sys, "pypy_version_info")
 skip_if_pypy = unittest.skipIf(using_pypy, "Skipping this test on pypy.")
 
-_skip_server_tests = os.environ.get(
-    'INFLUXDB_PYTHON_SKIP_SERVER_TESTS',
-    None) == 'True'
-skip_server_tests = unittest.skipIf(_skip_server_tests,
-                                    "Skipping server tests...")
+_skip_server_tests = os.environ.get("INFLUXDB_PYTHON_SKIP_SERVER_TESTS", None) == "True"
+skip_server_tests = unittest.skipIf(_skip_server_tests, "Skipping server tests...")

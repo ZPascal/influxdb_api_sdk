@@ -8,8 +8,8 @@ from __future__ import unicode_literals
 
 import sys
 
-from influxdb.tests import using_pypy
-from tests.unittests.tests.server_tests import InfluxDbInstance
+from tests.unittests import using_pypy
+from tests.unittests.server_tests.influxdb_instance import InfluxDbInstance
 
 from influxdb.client import InfluxDBClient
 
@@ -20,29 +20,22 @@ if not using_pypy:
 def _setup_influxdb_server(inst):
     inst.influxd_inst = InfluxDbInstance(
         inst.influxdb_template_conf,
-        udp_enabled=getattr(inst, 'influxdb_udp_enabled', False),
+        udp_enabled=getattr(inst, "influxdb_udp_enabled", False),
     )
 
-    inst.cli = InfluxDBClient('localhost',
-                              inst.influxd_inst.http_port,
-                              'root',
-                              '',
-                              database='db')
+    inst.cli = InfluxDBClient(
+        "localhost", inst.influxd_inst.http_port, "root", "", database="db"
+    )
     if not using_pypy:
-        inst.cliDF = DataFrameClient('localhost',
-                                     inst.influxd_inst.http_port,
-                                     'root',
-                                     '',
-                                     database='db')
+        inst.cliDF = DataFrameClient(
+            "localhost", inst.influxd_inst.http_port, "root", "", database="db"
+        )
 
 
 def _setup_gzip_client(inst):
-    inst.cli = InfluxDBClient('localhost',
-                              inst.influxd_inst.http_port,
-                              'root',
-                              '',
-                              database='db',
-                              gzip=True)
+    inst.cli = InfluxDBClient(
+        "localhost", inst.influxd_inst.http_port, "root", "", database="db", gzip=True
+    )
 
 
 def _teardown_influxdb_server(inst):
@@ -88,7 +81,7 @@ class ManyTestCasesWithServerMixin(object):
 
     def setUp(self):
         """Set up an instance of the ManyTestCasesWithServerMixin."""
-        self.cli.create_database('db')
+        self.cli.create_database("db")
 
     @classmethod
     def tearDownClass(cls):
@@ -97,7 +90,7 @@ class ManyTestCasesWithServerMixin(object):
 
     def tearDown(self):
         """Deconstruct an instance of ManyTestCasesWithServerMixin."""
-        self.cli.drop_database('db')
+        self.cli.drop_database("db")
 
 
 class SingleTestCaseWithServerGzipMixin(object):
