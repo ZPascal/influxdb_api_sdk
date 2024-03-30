@@ -22,6 +22,6 @@ def loads(s):
         s = s.strip()
         obj, pos = _decoder.raw_decode(s)
         if not pos:
-            raise ValueError('no JSON object found at %i' % pos)
+            raise ValueError("no JSON object found at %i" % pos)
         yield obj
         s = s[pos:]

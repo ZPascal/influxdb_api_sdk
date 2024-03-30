@@ -1,4 +1,0 @@
-nose
-nose-cov
-mock
-requests-mock

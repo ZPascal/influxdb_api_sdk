@@ -12,10 +12,10 @@ from .helper import SeriesHelper
 
 
 __all__ = [
-    'InfluxDBClient',
-    'DataFrameClient',
-    'SeriesHelper',
+    "InfluxDBClient",
+    "DataFrameClient",
+    "SeriesHelper",
 ]
 
 
-__version__ = '5.3.1'
+__version__ = "5.3.1"

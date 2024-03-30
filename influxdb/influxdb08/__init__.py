@@ -12,7 +12,7 @@ from .helper import SeriesHelper
 
 
 __all__ = [
-    'InfluxDBClient',
-    'DataFrameClient',
-    'SeriesHelper',
+    "InfluxDBClient",
+    "DataFrameClient",
+    "SeriesHelper",
 ]

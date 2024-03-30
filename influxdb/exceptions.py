@@ -12,17 +12,15 @@ class InfluxDBClientError(Exception):
 
     def __init__(self, content, code=None):
         """Initialize the InfluxDBClientError handler."""
-        if isinstance(content, type(b'')):
-            content = content.decode('UTF-8', 'replace')
+        if isinstance(content, type(b"")):
+            content = content.decode("UTF-8", "replace")
 
         if code is not None:
             message = "%s: %s" % (code, content)
         else:
             message = content
 
-        super(InfluxDBClientError, self).__init__(
-            message
-        )
+        super(InfluxDBClientError, self).__init__(message)
         self.content = content
         self.code = code
 
