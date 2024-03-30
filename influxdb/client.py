@@ -159,7 +159,7 @@ class InfluxDBClient(object):
         if ssl_context is not None and ssl_usage is False:
             raise ValueError("SSL context provided but ssl is disabled.")
 
-        self.__baseurl = "{0}://{1}:{2}".format(self._scheme, self._host, self._port)
+        self.__baseurl = "{0}://{1}:{2}{3}".format(self._scheme, self._host, self._port, self._path)
 
         if headers is None:
             headers = {}
@@ -342,7 +342,7 @@ class InfluxDBClient(object):
                     fields=params if method == "GET" else None,
                     body=data,
                     headers=headers,
-                    proxies=self._proxies,
+                    #proxies=self._proxies,
                     timeout=self._timeout,
                 )
                 break
