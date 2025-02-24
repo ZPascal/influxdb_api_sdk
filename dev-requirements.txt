@@ -2,7 +2,7 @@ requests>=2.17.0
 nose
 mock
 pandas==2.2.3
-Sphinx==8.1.3
+Sphinx==8.2.1
 sphinx_rtd_theme
 wheel
 twine
