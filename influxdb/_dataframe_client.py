@@ -227,7 +227,10 @@ class DataFrameClient(InfluxDBClient):
             else:
                 key = (name, tuple(sorted(tags.items())))
             df = pd.DataFrame(data)
-            df.time = pd.to_datetime(df.time)
+            if pd.api.types.is_object_dtype(df.time) or pd.api.types.is_string_dtype(df.time):
+                df.time = pd.to_datetime(df.time, format="ISO8601")
+            else:
+                df.time = pd.to_datetime(df.time)
 
             if data_frame_index:
                 df.set_index(data_frame_index, inplace=True)
@@ -317,7 +320,7 @@ class DataFrameClient(InfluxDBClient):
             }
             for ts, tag, (_, rec) in zip(
                 dataframe.index,
-                dataframe[tag_columns].to_dict("record"),
+                dataframe[tag_columns].to_dict("records"),
                 dataframe[field_columns].iterrows(),
             )
         ]
@@ -389,7 +392,7 @@ class DataFrameClient(InfluxDBClient):
         if isinstance(dataframe.index, pd.PeriodIndex):
             time = (
                 (
-                    dataframe.index.to_timestamp().values.astype(np.int64)
+                    dataframe.index.to_timestamp().values.astype("datetime64[ns]").astype(np.int64)
                     / precision_factor
                 )
                 .astype(np.int64)
@@ -398,7 +401,7 @@ class DataFrameClient(InfluxDBClient):
         else:
             time = (
                 (
-                    pd.to_datetime(dataframe.index).values.astype(np.int64)
+                    pd.to_datetime(dataframe.index).values.astype("datetime64[ns]").astype(np.int64)
                     / precision_factor
                 )
                 .astype(np.int64)
@@ -477,7 +480,7 @@ class DataFrameClient(InfluxDBClient):
             # If full precision, use repr to get full float precision
             float_columns = dframe.select_dtypes(include=["floating"]).columns
             nonfloat_columns = dframe.columns[~dframe.columns.isin(float_columns)]
-            dframe[float_columns] = dframe[float_columns].applymap(repr)
+            dframe[float_columns] = dframe[float_columns].apply(lambda col: col.map(repr))
             dframe[nonfloat_columns] = dframe[nonfloat_columns].astype(str)
         elif isinstance(numeric_precision, int):
             # If precision is specified, round to appropriate precision
@@ -487,7 +490,7 @@ class DataFrameClient(InfluxDBClient):
 
             # If desired precision is > 10 decimal places, need to use repr
             if numeric_precision > 10:
-                dframe[float_columns] = dframe[float_columns].applymap(repr)
+                dframe[float_columns] = dframe[float_columns].apply(lambda col: col.map(repr))
                 dframe[nonfloat_columns] = dframe[nonfloat_columns].astype(str)
             else:
                 dframe = dframe.astype(str)

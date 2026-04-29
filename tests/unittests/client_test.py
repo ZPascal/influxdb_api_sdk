@@ -35,8 +35,12 @@ from urllib3 import response
 from urllib3.exceptions import ConnectionError, HTTPError
 from urllib3.connection import HTTPConnection
 
+from tests.unittests import urllib3_mock as requests_mock
+from tests.unittests.urllib3_mock import _mocked_session, Mocker, _MockHTTPResponse
+
 from influxdb import InfluxDBClient
 from influxdb.resultset import ResultSet
+from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
 
 class TestInfluxDBClient(TestCase):
@@ -108,11 +112,13 @@ class TestInfluxDBClient(TestCase):
 
     def test_cert(self):
         """Test mutual TLS authentication for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient(ssl_usage=True, cert="/etc/pki/tls/private/dummy.crt")
-        self.assertEqual(influxdb_client._session.cert, "/etc/pki/tls/private/dummy.crt")
+        import ssl
+        ssl_ctx = ssl.create_default_context()
+        influxdb_client = InfluxDBClient(ssl_usage=True, ssl_context=ssl_ctx)
+        self.assertEqual(influxdb_client._ssl_context, ssl_ctx)
 
         with self.assertRaises(ValueError):
-            influxdb_client = InfluxDBClient(cert="/etc/pki/tls/private/dummy.crt")
+            InfluxDBClient(ssl_context=ssl_ctx)
 
     def test_switch_database(self):
         """Test switch database in TestInfluxDBClient object."""
@@ -356,7 +362,8 @@ class TestInfluxDBClient(TestCase):
         """Test write points fail for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password", "db")
         with _mocked_session(influxdb_client, "post", 500):
-            influxdb_client.write_points([])
+            with self.assertRaises(InfluxDBServerError):
+                influxdb_client.write_points([])
 
     def test_write_points_with_precision(self):
         """Test write points with precision for TestInfluxDBClient object."""
@@ -478,7 +485,7 @@ class TestInfluxDBClient(TestCase):
     def test_write_points_bad_precision(self):
         """Test write points w/bad precision TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             Exception,
             "Invalid time precision is given. "
             "\(use 'n', 'u', 'ms', 's', 'm' or 'h'\)",
@@ -495,7 +502,8 @@ class TestInfluxDBClient(TestCase):
         """Test write points w/precision fail for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password", "db")
         with _mocked_session(influxdb_client, "post", 500):
-            influxdb_client.write_points_with_precision([])
+            with self.assertRaises(InfluxDBServerError):
+                influxdb_client.write_points([])
 
     def test_query(self):
         """Test query method for TestInfluxDBClient object."""
@@ -596,7 +604,8 @@ class TestInfluxDBClient(TestCase):
     def test_query_fail(self):
         """Test query failed for TestInfluxDBClient object."""
         with _mocked_session(self.influxdb_client, "get", 401):
-            self.influxdb_client.query("select column_one from foo;")
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.query("select column_one from foo;")
 
     def test_ping(self):
         """Test ping querying InfluxDB version."""
@@ -619,7 +628,7 @@ class TestInfluxDBClient(TestCase):
                 text='{"results":[{}]}',
             )
             self.influxdb_client.create_database("new_db")
-            self.assertEqual(m.last_request.qs["q"][0], 'create database "new_db"')
+            self.assertEqual(m.last_request.qs["q"][0], 'CREATE DATABASE "new_db"')
 
     def test_create_numeric_named_database(self):
         """Test create db w/numeric name for TestInfluxDBClient object."""
@@ -630,12 +639,13 @@ class TestInfluxDBClient(TestCase):
                 text='{"results":[{}]}',
             )
             self.influxdb_client.create_database("123")
-            self.assertEqual(m.last_request.qs["q"][0], 'create database "123"')
+            self.assertEqual(m.last_request.qs["q"][0], 'CREATE DATABASE "123"')
 
     def test_create_database_fails(self):
         """Test create database fail for TestInfluxDBClient object."""
         with _mocked_session(self.influxdb_client, "post", 401):
-            self.influxdb_client.create_database("new_db")
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.create_database("new_db")
 
     def test_drop_database(self):
         """Test drop database for TestInfluxDBClient object."""
@@ -646,7 +656,7 @@ class TestInfluxDBClient(TestCase):
                 text='{"results":[{}]}',
             )
             self.influxdb_client.drop_database("new_db")
-            self.assertEqual(m.last_request.qs["q"][0], 'drop database "new_db"')
+            self.assertEqual(m.last_request.qs["q"][0], 'DROP DATABASE "new_db"')
 
     def test_drop_measurement(self):
         """Test drop measurement for TestInfluxDBClient object."""
@@ -658,7 +668,7 @@ class TestInfluxDBClient(TestCase):
             )
             self.influxdb_client.drop_measurement("new_measurement")
             self.assertEqual(
-                m.last_request.qs["q"][0], 'drop measurement "new_measurement"'
+                m.last_request.qs["q"][0], 'DROP MEASUREMENT "new_measurement"'
             )
 
     def test_drop_numeric_named_database(self):
@@ -670,7 +680,7 @@ class TestInfluxDBClient(TestCase):
                 text='{"results":[{}]}',
             )
             self.influxdb_client.drop_database("123")
-            self.assertEqual(m.last_request.qs["q"][0], 'drop database "123"')
+            self.assertEqual(m.last_request.qs["q"][0], 'DROP DATABASE "123"')
 
     def test_get_list_database(self):
         """Test get list of databases for TestInfluxDBClient object."""
@@ -698,7 +708,8 @@ class TestInfluxDBClient(TestCase):
         """Test get list of dbs fail for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password")
         with _mocked_session(influxdb_client, "get", 401):
-            influxdb_client.get_list_database()
+            with self.assertRaises(InfluxDBClientError):
+                influxdb_client.get_list_database()
 
     def test_get_list_measurements(self):
         """Test get list of measurements for TestInfluxDBClient object."""
@@ -794,7 +805,8 @@ class TestInfluxDBClient(TestCase):
         """Test get a list of series from the database but fail."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password")
         with _mocked_session(influxdb_client, "get", 401):
-            influxdb_client.get_list_series()
+            with self.assertRaises(InfluxDBClientError):
+                influxdb_client.get_list_series()
 
     def test_create_retention_policy_default(self):
         """Test create default ret policy for TestInfluxDBClient object."""
@@ -810,8 +822,8 @@ class TestInfluxDBClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename" on '
-                '"db" duration 1d replication 4 shard duration 0s default',
+                'CREATE RETENTION POLICY "somename" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 0s DEFAULT',
             )
 
     def test_create_retention_policy(self):
@@ -826,8 +838,8 @@ class TestInfluxDBClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename" on '
-                '"db" duration 1d replication 4 shard duration 0s',
+                'CREATE RETENTION POLICY "somename" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 0s',
             )
 
     def test_create_retention_policy_shard_duration(self):
@@ -844,8 +856,8 @@ class TestInfluxDBClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename2" on '
-                '"db" duration 1d replication 4 shard duration 1h',
+                'CREATE RETENTION POLICY "somename2" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 1h',
             )
 
     def test_create_retention_policy_shard_duration_default(self):
@@ -862,52 +874,53 @@ class TestInfluxDBClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename3" on '
-                '"db" duration 1d replication 4 shard duration 1h '
-                "default",
+                'CREATE RETENTION POLICY "somename3" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 1h '
+                "DEFAULT",
             )
 
-    @mock.patch("influxdb.client.urllib3.PoolManager")
-    def test_alter_retention_policy(self, pool_manager_mock):
+    def test_alter_retention_policy(self):
         """Test alter retention policy for TestInfluxDBClient object."""
-        pool_manager_mock.return_value = None
+        example_response = '{"results":[{}]}'
 
-        # Test alter duration
-        self.influxdb_client.alter_retention_policy("somename", "db", duration="4d")
-        self.assertEqual(
-            mock,
-            'alter retention policy "somename" on "db" duration 4d',
-        )
+        with Mocker() as m:
+            m.register_uri(
+                requests_mock.POST, "http://localhost:8086/query", text=example_response
+            )
 
-        mock.request.assert_called_once_with('POST', 'http://localhost:3000',
-                                                  body=json.dumps({'attribute': 'value'}).encode('utf-8'))
+            # Test alter duration
+            self.influxdb_client.alter_retention_policy("somename", "db", duration="4d")
+            self.assertEqual(
+                m.last_request.qs["q"][0],
+                'ALTER RETENTION POLICY "somename" ON "db" DURATION 4d',
+            )
 
-        # Test alter replication
-        self.influxdb_client.alter_retention_policy("somename", "db", replication=4)
-        self.assertEqual(
-            m.last_request.qs["q"][0],
-            'alter retention policy "somename" on "db" replication 4',
-        )
+            # Test alter replication
+            self.influxdb_client.alter_retention_policy("somename", "db", replication=4)
+            self.assertEqual(
+                m.last_request.qs["q"][0],
+                'ALTER RETENTION POLICY "somename" ON "db" REPLICATION 4',
+            )
 
-        # Test alter shard duration
-        self.influxdb_client.alter_retention_policy("somename", "db", shard_duration="1h")
-        self.assertEqual(
-            m.last_request.qs["q"][0],
-            'alter retention policy "somename" on "db" shard duration 1h',
-        )
+            # Test alter shard duration
+            self.influxdb_client.alter_retention_policy("somename", "db", shard_duration="1h")
+            self.assertEqual(
+                m.last_request.qs["q"][0],
+                'ALTER RETENTION POLICY "somename" ON "db" SHARD DURATION 1h',
+            )
 
-        # Test alter default
-        self.influxdb_client.alter_retention_policy("somename", "db", default=True)
-        self.assertEqual(
-            m.last_request.qs["q"][0],
-            'alter retention policy "somename" on "db" default',
-        )
+            # Test alter default
+            self.influxdb_client.alter_retention_policy("somename", "db", default=True)
+            self.assertEqual(
+                m.last_request.qs["q"][0],
+                'ALTER RETENTION POLICY "somename" ON "db" DEFAULT',
+            )
 
     def test_alter_retention_policy_invalid(self):
         """Test invalid alter ret policy for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient("host", 8086, "username", "password")
-        with _mocked_session(influxdb_client, "get", 400):
-            self.influxdb_client.alter_retention_policy("somename", "db")
+        with _mocked_session(self.influxdb_client, "get", 400):
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.alter_retention_policy("somename", "db")
 
     def test_drop_retention_policy(self):
         """Test drop retention policy for TestInfluxDBClient object."""
@@ -919,14 +932,15 @@ class TestInfluxDBClient(TestCase):
             )
             self.influxdb_client.drop_retention_policy("somename", "db")
             self.assertEqual(
-                m.last_request.qs["q"][0], 'drop retention policy "somename" on "db"'
+                m.last_request.qs["q"][0], 'DROP RETENTION POLICY "somename" ON "db"'
             )
 
     def test_drop_retention_policy_fails(self):
         """Test failed drop ret policy for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password")
         with _mocked_session(influxdb_client, "delete", 401):
-            influxdb_client.drop_retention_policy("default", "db")
+            with self.assertRaises(InfluxDBClientError):
+                influxdb_client.drop_retention_policy("default", "db")
 
     def test_get_list_retention_policies(self):
         """Test get retention policies for TestInfluxDBClient object."""
@@ -944,8 +958,7 @@ class TestInfluxDBClient(TestCase):
                 [{"duration": "24h0m0s", "name": "fsfdsdf", "replicaN": 2}],
             )
 
-    @patch("requests.Session.request")
-    def test_request_retry(self, mock_request):
+    def test_request_retry(self):
         """Test that two connection errors will be handled."""
 
         class CustomMock(object):
@@ -961,17 +974,13 @@ class TestInfluxDBClient(TestCase):
                 if self.i < 3:
                     raise ConnectionError
 
-                r = requests.Response()
-                r.status_code = 204
-                return r
-
-        mock_request.side_effect = CustomMock().connection_error
+                return _MockHTTPResponse(status=204)
 
         influxdb_client = InfluxDBClient(database="db")
-        influxdb_client.write_points(self.dummy_points)
+        with patch.object(influxdb_client._session, "request", side_effect=CustomMock().connection_error):
+            influxdb_client.write_points(self.dummy_points)
 
-    @mock.patch("requests.Session.request")
-    def test_request_retry_raises(self, mock_request):
+    def test_request_retry_raises(self):
         """Test that three requests errors will not be handled."""
 
         class CustomMock(object):
@@ -987,19 +996,15 @@ class TestInfluxDBClient(TestCase):
                 if self.i < 4:
                     raise HTTPError
                 else:
-                    r = requests.Response()
-                    r.status_code = 200
-                    return r
-
-        mock_request.side_effect = CustomMock().connection_error
+                    return _MockHTTPResponse(status=200)
 
         influxdb_client = InfluxDBClient(database="db")
 
         with self.assertRaises(HTTPError):
-            influxdb_client.write_points(self.dummy_points)
+            with patch.object(influxdb_client._session, "request", side_effect=CustomMock().connection_error):
+                influxdb_client.write_points(self.dummy_points)
 
-    @mock.patch("requests.Session.request")
-    def test_random_request_retry(self, mock_request):
+    def test_random_request_retry(self):
         """Test that a random number of connection errors will be handled."""
 
         class CustomMock(object):
@@ -1016,18 +1021,14 @@ class TestInfluxDBClient(TestCase):
                 if self.i < self.retries:
                     raise ConnectionError
                 else:
-                    r = requests.Response()
-                    r.status_code = 204
-                    return r
+                    return _MockHTTPResponse(status=204)
 
         retries = random.randint(1, 5)
-        mock_request.side_effect = CustomMock(retries).connection_error
-
         influxdb_client = InfluxDBClient(database="db", retries=retries)
-        influxdb_client.write_points(self.dummy_points)
+        with patch.object(influxdb_client._session, "request", side_effect=CustomMock(retries).connection_error):
+            influxdb_client.write_points(self.dummy_points)
 
-    @mock.patch("requests.Session.request")
-    def test_random_request_retry_raises(self, mock_request):
+    def test_random_request_retry_raises(self):
         """Test a random number of conn errors plus one will not be handled."""
 
         class CustomMock(object):
@@ -1044,17 +1045,14 @@ class TestInfluxDBClient(TestCase):
                 if self.i < self.retries + 1:
                     raise ConnectionError
                 else:
-                    r = requests.Response()
-                    r.status_code = 200
-                    return r
+                    return _MockHTTPResponse(status=200)
 
         retries = random.randint(1, 5)
-        mock_request.side_effect = CustomMock(retries).connection_error
-
         influxdb_client = InfluxDBClient(database="db", retries=retries)
 
         with self.assertRaises(ConnectionError):
-            influxdb_client.write_points(self.dummy_points)
+            with patch.object(influxdb_client._session, "request", side_effect=CustomMock(retries).connection_error):
+                influxdb_client.write_points(self.dummy_points)
 
     def test_get_list_users(self):
         """Test get users for TestInfluxDBClient object."""
@@ -1093,14 +1091,14 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.grant_admin_privileges("test")
 
             self.assertEqual(
-                m.last_request.qs["q"][0], 'grant all privileges to "test"'
+                m.last_request.qs["q"][0], 'GRANT ALL PRIVILEGES TO "test"'
             )
 
     def test_grant_admin_privileges_invalid(self):
         """Test grant invalid admin privs for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient("host", 8086, "username", "password")
-        with _mocked_session(influxdb_client, "get", 400):
-            self.influxdb_client.grant_admin_privileges("")
+        with _mocked_session(self.influxdb_client, "get", 400):
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.grant_admin_privileges("")
 
     def test_revoke_admin_privileges(self):
         """Test revoke admin privs for TestInfluxDBClient object."""
@@ -1113,14 +1111,14 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.revoke_admin_privileges("test")
 
             self.assertEqual(
-                m.last_request.qs["q"][0], 'revoke all privileges from "test"'
+                m.last_request.qs["q"][0], 'REVOKE ALL PRIVILEGES FROM "test"'
             )
 
     def test_revoke_admin_privileges_invalid(self):
         """Test revoke invalid admin privs for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient("host", 8086, "username", "password")
-        with _mocked_session(influxdb_client, "get", 400):
-            self.influxdb_client.revoke_admin_privileges("")
+        with _mocked_session(self.influxdb_client, "get", 400):
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.revoke_admin_privileges("")
 
     def test_grant_privilege(self):
         """Test grant privs for TestInfluxDBClient object."""
@@ -1133,14 +1131,14 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.grant_privilege("read", "testdb", "test")
 
             self.assertEqual(
-                m.last_request.qs["q"][0], 'grant read on "testdb" to "test"'
+                m.last_request.qs["q"][0], 'GRANT read ON "testdb" TO "test"'
             )
 
     def test_grant_privilege_invalid(self):
         """Test grant invalid privs for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient("host", 8086, "username", "password")
-        with _mocked_session(influxdb_client, "get", 400):
-            self.influxdb_client.grant_privilege("", "testdb", "test")
+        with _mocked_session(self.influxdb_client, "get", 400):
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.grant_privilege("", "testdb", "test")
 
     def test_revoke_privilege(self):
         """Test revoke privs for TestInfluxDBClient object."""
@@ -1153,14 +1151,14 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.revoke_privilege("read", "testdb", "test")
 
             self.assertEqual(
-                m.last_request.qs["q"][0], 'revoke read on "testdb" from "test"'
+                m.last_request.qs["q"][0], 'REVOKE read ON "testdb" FROM "test"'
             )
 
     def test_revoke_privilege_invalid(self):
         """Test revoke invalid privs for TestInfluxDBClient object."""
-        influxdb_client = InfluxDBClient("host", 8086, "username", "password")
-        with _mocked_session(influxdb_client, "get", 400):
-            self.influxdb_client.revoke_privilege("", "testdb", "test")
+        with _mocked_session(self.influxdb_client, "get", 400):
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.revoke_privilege("", "testdb", "test")
 
     def test_get_list_privileges(self):
         """Test get list of privs for TestInfluxDBClient object."""
@@ -1195,7 +1193,8 @@ class TestInfluxDBClient(TestCase):
         """Test failed get list of privs for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient("host", 8086, "username", "password")
         with _mocked_session(influxdb_client, "get", 401):
-            influxdb_client.get_list_privileges("test")
+            with self.assertRaises(InfluxDBClientError):
+                influxdb_client.get_list_privileges("test")
 
     def test_get_list_continuous_queries(self):
         """Test getting a list of continuous queries."""
@@ -1241,7 +1240,8 @@ class TestInfluxDBClient(TestCase):
     def test_get_list_continuous_queries_fails(self):
         """Test failing to get a list of continuous queries."""
         with _mocked_session(self.influxdb_client, "get", 400):
-            self.influxdb_client.get_list_continuous_queries()
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.get_list_continuous_queries()
 
     def test_create_continuous_query(self):
         """Test continuous query creation."""
@@ -1257,24 +1257,25 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.create_continuous_query("cq_name", query, "db_name")
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create continuous query "cq_name" on "db_name" begin select '
-                'count("value") into "6_months"."events" from "events" group '
-                "by time(10m) end",
+                'CREATE CONTINUOUS QUERY "cq_name" ON "db_name" BEGIN SELECT '
+                'count("value") INTO "6_months"."events" FROM "events" GROUP '
+                "BY time(10m) END",
             )
             self.influxdb_client.create_continuous_query(
                 "cq_name", query, "db_name", "EVERY 10s FOR 2m"
             )
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create continuous query "cq_name" on "db_name" resample '
-                'every 10s for 2m begin select count("value") into '
-                '"6_months"."events" from "events" group by time(10m) end',
+                'CREATE CONTINUOUS QUERY "cq_name" ON "db_name" RESAMPLE '
+                'EVERY 10s FOR 2m BEGIN SELECT count("value") INTO '
+                '"6_months"."events" FROM "events" GROUP BY time(10m) END',
             )
 
     def test_create_continuous_query_fails(self):
         """Test failing to create a continuous query."""
         with _mocked_session(self.influxdb_client, "get", 400):
-            self.influxdb_client.create_continuous_query("cq_name", "select", "db_name")
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.create_continuous_query("cq_name", "select", "db_name")
 
     def test_drop_continuous_query(self):
         """Test dropping a continuous query."""
@@ -1286,13 +1287,14 @@ class TestInfluxDBClient(TestCase):
             self.influxdb_client.drop_continuous_query("cq_name", "db_name")
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'drop continuous query "cq_name" on "db_name"',
+                'DROP CONTINUOUS QUERY "cq_name" ON "db_name"',
             )
 
     def test_drop_continuous_query_fails(self):
         """Test failing to drop a continuous query."""
         with _mocked_session(self.influxdb_client, "get", 400):
-            self.influxdb_client.drop_continuous_query("cq_name", "db_name")
+            with self.assertRaises(InfluxDBClientError):
+                self.influxdb_client.drop_continuous_query("cq_name", "db_name")
 
     def test_invalid_port_fails(self):
         """Test invalid port fail for TestInfluxDBClient object."""
@@ -1418,43 +1420,21 @@ class TestInfluxDBClient(TestCase):
 
     def test_custom_socket_options(self):
         """Test custom socket options."""
-        test_socket_options = HTTPConnection.default_socket_options + [
-            (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
-            (socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 60),
-            (socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 15),
-        ]
+        test_socket_options = [(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)]
 
         influxdb_client = InfluxDBClient(
             username=None, password=None, socket_options=test_socket_options
         )
 
-        self.assertEquals(
-            influxdb_client._session.adapters.get("http://").socket_options, test_socket_options
-        )
-        self.assertEquals(
-            influxdb_client._session.adapters.get("http://").poolmanager.connection_pool_kw.get(
-                "socket_options"
-            ),
+        self.assertEqual(
+            influxdb_client._session.connection_pool_kw.get("socket_options"),
             test_socket_options,
         )
-
-        connection_pool = influxdb_client._session.adapters.get(
-            "http://"
-        ).poolmanager.connection_from_url(url="http://localhost:8086")
-        new_connection = connection_pool._new_conn()
-        self.assertEquals(new_connection.socket_options, test_socket_options)
 
     def test_none_socket_options(self):
         """Test default socket options."""
         influxdb_client = InfluxDBClient(username=None, password=None)
-        self.assertEquals(influxdb_client._session.adapters.get("http://").socket_options, None)
-        connection_pool = influxdb_client._session.adapters.get(
-            "http://"
-        ).poolmanager.connection_from_url(url="http://localhost:8086")
-        new_connection = connection_pool._new_conn()
-        self.assertEquals(
-            new_connection.socket_options, HTTPConnection.default_socket_options
-        )
+        self.assertNotIn("socket_options", influxdb_client._session.connection_pool_kw)
 
 
 class FakeClient(InfluxDBClient):

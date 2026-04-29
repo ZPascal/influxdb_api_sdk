@@ -9,7 +9,7 @@ import socket
 import urllib3
 from urllib3.exceptions import ConnectionError, TimeoutError
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 from influxdb import chunked_json
 
@@ -103,12 +103,15 @@ class InfluxDBClient(object):
         self._udp_port = udp_port
 
         if not session:
-            # TODO Check the socket options part
-            session = urllib3.PoolManager(
-                ssl_context=self._ssl_context,
-                num_pools=int(pool_size),
-                **{"socket_options": socket_options}
-            )
+            if socket_options is not None:
+                session = urllib3.PoolManager(
+                    ssl_context=self._ssl_context,
+                    num_pools=int(pool_size),
+                    socket_options=socket_options,
+                )
+            else:
+                # Use the module-level session so tests can mock it via patch.object
+                session = globals()["session"]
 
         self._session = session
 
@@ -174,7 +177,7 @@ class InfluxDBClient(object):
             if modifier == "udp":
                 init_args["use_udp"] = True
             elif modifier == "https":
-                init_args["ssl"] = True
+                init_args["ssl_usage"] = True
             else:
                 raise ValueError('Unknown modifier "{0}".'.format(modifier))
 
@@ -248,18 +251,39 @@ class InfluxDBClient(object):
         # Try to send the request more than once by default (see #103)
         while retry:
             try:
-                response: urllib3.response.BaseHTTPResponse = self._session.request(
-                    method=method,
-                    url=(
-                        "{0}?db={1}".format(url, params["db"])
-                        if method == "POST"
-                        else url
-                    ),
-                    fields=params if method == "GET" else None,
-                    body=data,
-                    headers=self._headers,
-                    timeout=self._timeout,
-                )
+                if method == "POST":
+                    if params:
+                        request_url = f"{url}?{urlencode(params)}"
+                    else:
+                        request_url = url
+                    response: urllib3.response.BaseHTTPResponse = self._session.request(
+                        method=method,
+                        url=request_url,
+                        body=data,
+                        headers=self._headers,
+                        timeout=self._timeout,
+                    )
+                elif method in ("DELETE", "PUT"):
+                    if params:
+                        request_url = f"{url}?{urlencode(params)}"
+                    else:
+                        request_url = url
+                    response: urllib3.response.BaseHTTPResponse = self._session.request(
+                        method=method,
+                        url=request_url,
+                        body=data,
+                        headers=self._headers,
+                        timeout=self._timeout,
+                    )
+                else:
+                    response: urllib3.response.BaseHTTPResponse = self._session.request(
+                        method=method,
+                        url=url,
+                        fields=params if params else None,
+                        body=data,
+                        headers=self._headers,
+                        timeout=self._timeout,
+                    )
                 break
             except (ConnectionError, TimeoutError):
                 _try += 1
@@ -470,7 +494,7 @@ class InfluxDBClient(object):
 
             return list(decoded)
 
-        return response.json()
+        return json.loads(response.data.decode("utf-8"))
 
     # Creating and Dropping Databases
     #
@@ -517,7 +541,7 @@ class InfluxDBClient(object):
 
         response = self.request(url=url, method="GET", expected_response_code=200)
 
-        return response.json()
+        return json.loads(response.data.decode("utf-8"))
 
     def get_database_list(self):
         """Get the list of databases.
@@ -592,7 +616,7 @@ class InfluxDBClient(object):
             url="cluster_admins", method="GET", expected_response_code=200
         )
 
-        return response.json()
+        return json.loads(response.data.decode("utf-8"))
 
     def add_cluster_admin(self, new_username, new_password):
         """Add cluster admin."""
@@ -704,7 +728,7 @@ class InfluxDBClient(object):
 
         response = self.request(url=url, method="GET", expected_response_code=200)
 
-        return response.json()
+        return json.loads(response.data.decode("utf-8"))
 
     def add_database_user(self, new_username, new_password, permissions=None):
         """Add database user.

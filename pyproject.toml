@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "influxdb-api-sdk"
+version = "6.0.1"
+description = "A InfluxDB API SDK"
+readme = "README_old.md"
+license = {text = "Apache-2.0 License"}
+authors = [
+    {name = "Pascal Zimmermann", email = "info@theiotstudio.com"},
+]
+requires-python = ">=3.8"
+dependencies = [
+    "python-dateutil",
+    "pytz",
+    "urllib3",
+    "msgpack",
+]
+
+[project.urls]
+Source = "https://github.com/ZPascal/influxdb_api_sdk"
+"Bug Tracker" = "https://github.com/ZPascal/influxdb_api_sdk/issues"
+Documentation = "https://zpascal.github.io/influxdb_api_sdk/"
+
+[project.optional-dependencies]
+test = ["pytest", "pandas", "numpy"]
+dataframe = ["pandas", "numpy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

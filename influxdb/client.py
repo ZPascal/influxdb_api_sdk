@@ -20,7 +20,7 @@ from itertools import chain, islice
 
 import msgpack
 import urllib3
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 from influxdb.line_protocol import make_lines, quote_ident, quote_literal
 from influxdb.resultset import ResultSet
@@ -127,11 +127,13 @@ class InfluxDBClient(object):
         self.__udp_port = int(udp_port)
 
         if not session:
-            # TODO Check the socket options part
+            pool_kwargs = {}
+            if socket_options is not None:
+                pool_kwargs["socket_options"] = socket_options
             session = urllib3.PoolManager(
                 ssl_context=self._ssl_context,
                 num_pools=int(pool_size),
-                **{"socket_options": socket_options},
+                **pool_kwargs,
             )
 
         self._session = session
@@ -326,25 +328,32 @@ class InfluxDBClient(object):
         _try = 0
         while retry:
             try:
-                if "Authorization" not in headers:
+                if "Authorization" not in headers and self._username is not None and self._password is not None:
                     headers.update(
                         urllib3.make_headers(
                             basic_auth=f"{self._username}:{self._password}"
                         )
                     )
 
-                # TODO Adjust the requests settings proxies | timeout | stream
-                # TODO Adjust the flux v2 support for post requests
-
-                response: urllib3.response.BaseHTTPResponse = self._session.request(
-                    method=method,
-                    url=f"{url}?db={params['db']}" if method == "POST" else url,
-                    fields=params if method == "GET" else None,
-                    body=data,
-                    headers=headers,
-                    #proxies=self._proxies,
-                    timeout=self._timeout,
-                )
+                if method == "POST":
+                    if params:
+                        url = f"{url}?{urlencode(params)}"
+                    response: urllib3.response.BaseHTTPResponse = self._session.request(
+                        method=method,
+                        url=url,
+                        body=data,
+                        headers=headers,
+                        timeout=self._timeout,
+                    )
+                else:
+                    response: urllib3.response.BaseHTTPResponse = self._session.request(
+                        method=method,
+                        url=url,
+                        fields=params if params else None,
+                        body=data,
+                        headers=headers,
+                        timeout=self._timeout,
+                    )
                 break
             except (
                 urllib3.exceptions.ConnectionError,
@@ -371,7 +380,7 @@ class InfluxDBClient(object):
             if response._msgpack:
                 return json.dumps(response._msgpack, separators=(",", ":"))
             else:
-                return response.content
+                return response.data
 
         # if there's not an error, there must have been a successful response
         if 500 <= response.status < 600:
@@ -426,9 +435,10 @@ class InfluxDBClient(object):
 
     @staticmethod
     def _read_chunked_response(response, raise_errors=True):
-        for line in response.iter_lines():
-            if isinstance(line, bytes):
-                line = line.decode("utf-8")
+        data_text = response.data.decode("utf-8")
+        for line in data_text.splitlines():
+            if not line.strip():
+                continue
             data = json.loads(line)
             result_set = {}
             for result in data.get("results", []):
@@ -536,7 +546,7 @@ class InfluxDBClient(object):
         if not data:
             if chunked:
                 return self._read_chunked_response(response)
-            data = response.json()
+            data = json.loads(response.data.decode("utf-8"))
 
         results = [
             ResultSet(result, raise_errors=raise_errors)
@@ -1238,7 +1248,7 @@ def _parse_dsn(dsn):
         if modifier == "udp":
             init_args["use_udp"] = True
         elif modifier == "https":
-            init_args["ssl"] = True
+            init_args["ssl_usage"] = True
         else:
             raise ValueError('Unknown modifier "{0}".'.format(modifier))
 

@@ -13,11 +13,14 @@ from unittest import TestCase
 import warnings
 
 from tests.unittests import skip_if_pypy, using_pypy
+from tests.unittests import urllib3_mock as requests_mock
+from tests.unittests.urllib3_mock import _mocked_session
 
 if not using_pypy:
     import pandas as pd
     from pandas._testing import assert_frame_equal
     from influxdb import DataFrameClient
+    from influxdb.exceptions import InfluxDBClientError
     import numpy as np
 
 
@@ -348,7 +351,7 @@ class TestDataFrameClient(TestCase):
                 ["some", "2", 2, None],  # skip None
                 ["", "2", 2, None],  # all tags empty
             ],
-            index=pd.period_range(now, freq="H", periods=5),
+            index=pd.period_range(now, freq="h", periods=5),
             columns=["tag_one", "column_one", "column_two", "tag_three"],
         )
 
@@ -631,7 +634,8 @@ class TestDataFrameClient(TestCase):
             )
 
             cli = DataFrameClient(database="db")
-            cli.write_points(dataframe, "foo")
+            with self.assertRaises(TypeError):
+                cli.write_points(dataframe, "foo")
 
     def test_write_points_from_dataframe_fails_with_series(self):
         """Test failed write points from df with series."""
@@ -646,7 +650,8 @@ class TestDataFrameClient(TestCase):
             )
 
             cli = DataFrameClient(database="db")
-            cli.write_points(dataframe, "foo")
+            with self.assertRaises(TypeError):
+                cli.write_points(dataframe, "foo")
 
     def test_create_database(self):
         """Test create database for TestInfluxDBClient object."""
@@ -658,7 +663,7 @@ class TestDataFrameClient(TestCase):
                 text='{"results":[{}]}',
             )
             cli.create_database("new_db")
-            self.assertEqual(m.last_request.qs["q"][0], 'create database "new_db"')
+            self.assertEqual(m.last_request.qs["q"][0], 'CREATE DATABASE "new_db"')
 
     def test_create_numeric_named_database(self):
         """Test create db w/numeric name for TestInfluxDBClient object."""
@@ -670,13 +675,14 @@ class TestDataFrameClient(TestCase):
                 text='{"results":[{}]}',
             )
             cli.create_database("123")
-            self.assertEqual(m.last_request.qs["q"][0], 'create database "123"')
+            self.assertEqual(m.last_request.qs["q"][0], 'CREATE DATABASE "123"')
 
     def test_create_database_fails(self):
         """Test create database fail for TestInfluxDBClient object."""
         cli = DataFrameClient(database="db")
         with _mocked_session(cli, "post", 401):
-            cli.create_database("new_db")
+            with self.assertRaises(InfluxDBClientError):
+                cli.create_database("new_db")
 
     def test_drop_database(self):
         """Test drop database for TestInfluxDBClient object."""
@@ -688,7 +694,7 @@ class TestDataFrameClient(TestCase):
                 text='{"results":[{}]}',
             )
             cli.drop_database("new_db")
-            self.assertEqual(m.last_request.qs["q"][0], 'drop database "new_db"')
+            self.assertEqual(m.last_request.qs["q"][0], 'DROP DATABASE "new_db"')
 
     def test_drop_measurement(self):
         """Test drop measurement for TestInfluxDBClient object."""
@@ -701,7 +707,7 @@ class TestDataFrameClient(TestCase):
             )
             cli.drop_measurement("new_measurement")
             self.assertEqual(
-                m.last_request.qs["q"][0], 'drop measurement "new_measurement"'
+                m.last_request.qs["q"][0], 'DROP MEASUREMENT "new_measurement"'
             )
 
     def test_drop_numeric_named_database(self):
@@ -714,13 +720,14 @@ class TestDataFrameClient(TestCase):
                 text='{"results":[{}]}',
             )
             cli.drop_database("123")
-            self.assertEqual(m.last_request.qs["q"][0], 'drop database "123"')
+            self.assertEqual(m.last_request.qs["q"][0], 'DROP DATABASE "123"')
 
     def test_get_list_database_fails(self):
         """Test get list of dbs fail for TestInfluxDBClient object."""
         cli = DataFrameClient("host", 8086, "username", "password")
         with _mocked_session(cli, "get", 401):
-            cli.get_list_database()
+            with self.assertRaises(InfluxDBClientError):
+                cli.get_list_database()
 
     def test_get_list_measurements(self):
         """Test get list of measurements for TestInfluxDBClient object."""
@@ -759,8 +766,8 @@ class TestDataFrameClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename" on '
-                '"db" duration 1d replication 4 shard duration 0s default',
+                'CREATE RETENTION POLICY "somename" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 0s DEFAULT',
             )
 
     def test_create_retention_policy(self):
@@ -776,8 +783,8 @@ class TestDataFrameClient(TestCase):
 
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'create retention policy "somename" on '
-                '"db" duration 1d replication 4 shard duration 0s',
+                'CREATE RETENTION POLICY "somename" ON '
+                '"db" DURATION 1d REPLICATION 4 SHARD DURATION 0s',
             )
 
     def test_alter_retention_policy(self):
@@ -793,34 +800,35 @@ class TestDataFrameClient(TestCase):
             cli.alter_retention_policy("somename", "db", duration="4d")
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'alter retention policy "somename" on "db" duration 4d',
+                'ALTER RETENTION POLICY "somename" ON "db" DURATION 4d',
             )
             # Test alter replication
             cli.alter_retention_policy("somename", "db", replication=4)
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'alter retention policy "somename" on "db" replication 4',
+                'ALTER RETENTION POLICY "somename" ON "db" REPLICATION 4',
             )
 
             # Test alter shard duration
             cli.alter_retention_policy("somename", "db", shard_duration="1h")
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'alter retention policy "somename" on "db" shard duration 1h',
+                'ALTER RETENTION POLICY "somename" ON "db" SHARD DURATION 1h',
             )
 
             # Test alter default
             cli.alter_retention_policy("somename", "db", default=True)
             self.assertEqual(
                 m.last_request.qs["q"][0],
-                'alter retention policy "somename" on "db" default',
+                'ALTER RETENTION POLICY "somename" ON "db" DEFAULT',
             )
 
     def test_alter_retention_policy_invalid(self):
         """Test invalid alter ret policy for TestInfluxDBClient object."""
         cli = DataFrameClient("host", 8086, "username", "password")
         with _mocked_session(cli, "get", 400):
-            cli.alter_retention_policy("somename", "db")
+            with self.assertRaises(InfluxDBClientError):
+                cli.alter_retention_policy("somename", "db")
 
     def test_drop_retention_policy(self):
         """Test drop retention policy for TestInfluxDBClient object."""
@@ -833,14 +841,15 @@ class TestDataFrameClient(TestCase):
             )
             cli.drop_retention_policy("somename", "db")
             self.assertEqual(
-                m.last_request.qs["q"][0], 'drop retention policy "somename" on "db"'
+                m.last_request.qs["q"][0], 'DROP RETENTION POLICY "somename" ON "db"'
             )
 
     def test_drop_retention_policy_fails(self):
         """Test failed drop ret policy for TestInfluxDBClient object."""
         cli = DataFrameClient("host", 8086, "username", "password")
         with _mocked_session(cli, "delete", 401):
-            cli.drop_retention_policy("default", "db")
+            with self.assertRaises(InfluxDBClientError):
+                cli.drop_retention_policy("default", "db")
 
     def test_get_list_retention_policies(self):
         """Test get retention policies for TestInfluxDBClient object."""
@@ -948,7 +957,8 @@ class TestDataFrameClient(TestCase):
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-06-11 20:46:02+0000",
-                ]
+                ],
+                format="ISO8601",
             ),
         )
         if pd1.index.tzinfo is None:
@@ -984,14 +994,14 @@ class TestDataFrameClient(TestCase):
                             "name": "cpu_load_short",
                             "columns": ["time", "value", "value2", "value3"],
                             "values": [
-                                ["2015-01-29T21:55:43.702900257Z", 0.55, 0.254, np.NaN],
+                                ["2015-01-29T21:55:43.702900257Z", 0.55, 0.254, np.nan],
                                 [
                                     "2015-01-29T21:55:43.702900257Z",
                                     23422,
                                     122878,
-                                    np.NaN,
+                                    np.nan,
                                 ],
-                                ["2015-06-11T20:46:02Z", 0.64, 0.5434, np.NaN],
+                                ["2015-06-11T20:46:02Z", 0.64, 0.5434, np.nan],
                             ],
                         }
                     ]
@@ -1009,14 +1019,15 @@ class TestDataFrameClient(TestCase):
         }
 
         pd1 = pd.DataFrame(
-            [[0.55, 0.254, np.NaN], [23422.0, 122878, np.NaN], [0.64, 0.5434, np.NaN]],
+            [[0.55, 0.254, np.nan], [23422.0, 122878, np.nan], [0.64, 0.5434, np.nan]],
             columns=["value", "value2", "value3"],
             index=pd.to_datetime(
                 [
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-06-11 20:46:02+0000",
-                ]
+                ],
+                format="ISO8601",
             ),
         )
 
@@ -1031,7 +1042,8 @@ class TestDataFrameClient(TestCase):
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-01-29 21:55:43.702900257+0000",
                     "2015-06-11 20:46:02+0000",
-                ]
+                ],
+                format="ISO8601",
             ),
         )
 

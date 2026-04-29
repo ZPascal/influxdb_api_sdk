@@ -10,6 +10,11 @@ import warnings
 
 from tests.unittests import skip_if_pypy, using_pypy
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import urllib3_mock as requests_mock
+
 from .client_test import _mocked_session
 
 if not using_pypy:
@@ -182,7 +187,8 @@ class TestDataFrameClient(unittest.TestCase):
             m.register_uri(requests_mock.POST, "http://localhost:8086/db/db/series")
 
             cli = DataFrameClient(database="db")
-            cli.write_points({"foo": dataframe})
+            with self.assertRaises(TypeError):
+                cli.write_points({"foo": dataframe})
 
     def test_write_points_from_dataframe_fails_with_series(self):
         """Test failed write points from dataframe with series."""
@@ -193,7 +199,8 @@ class TestDataFrameClient(unittest.TestCase):
             m.register_uri(requests_mock.POST, "http://localhost:8086/db/db/series")
 
             cli = DataFrameClient(database="db")
-            cli.write_points({"foo": dataframe})
+            with self.assertRaises(TypeError):
+                cli.write_points({"foo": dataframe})
 
     def test_query_into_dataframe(self):
         """Test query into a dataframe."""
@@ -211,7 +218,7 @@ class TestDataFrameClient(unittest.TestCase):
             columns=["sequence_number", "column_one"],
         )
         with _mocked_session("get", 200, data):
-            cli = DataFrameClient("host", 8086, "username", "password", "db")
+            cli = DataFrameClient(host="host", port=8086, username="username", password="password", database="db")
             result = cli.query("select column_one from foo;")
             assert_frame_equal(dataframe, result)
 
@@ -252,7 +259,7 @@ class TestDataFrameClient(unittest.TestCase):
             ),
         }
         with _mocked_session("get", 200, data):
-            cli = DataFrameClient("host", 8086, "username", "password", "db")
+            cli = DataFrameClient(host="host", port=8086, username="username", password="password", database="db")
             result = cli.query(
                 """select mean(value), min(value), max(value),
                 stddev(value) from series1, series2, series3"""
@@ -264,7 +271,7 @@ class TestDataFrameClient(unittest.TestCase):
     def test_query_with_empty_result(self):
         """Test query with empty results."""
         with _mocked_session("get", 200, []):
-            cli = DataFrameClient("host", 8086, "username", "password", "db")
+            cli = DataFrameClient(host="host", port=8086, username="username", password="password", database="db")
             result = cli.query("select column_one from foo;")
             self.assertEqual(result, [])
 
@@ -278,14 +285,14 @@ class TestDataFrameClient(unittest.TestCase):
             }
         ]
         with _mocked_session("get", 200, response):
-            cli = DataFrameClient("host", 8086, "username", "password", "db")
+            cli = DataFrameClient(host="host", port=8086, username="username", password="password", database="db")
             series_list = cli.get_list_series()
             self.assertEqual(series_list, ["seriesA", "seriesB"])
 
     def test_datetime_to_epoch(self):
         """Test convert datetime to epoch."""
         timestamp = pd.Timestamp("2013-01-01 00:00:00.000+00:00")
-        cli = DataFrameClient("host", 8086, "username", "password", "db")
+        cli = DataFrameClient(host="host", port=8086, username="username", password="password", database="db")
 
         self.assertEqual(cli._datetime_to_epoch(timestamp), 1356998400.0)
         self.assertEqual(

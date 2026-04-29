@@ -365,8 +365,9 @@ class TestSeriesHelper(TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             WarnBulkSizeNoEffect(time=159, server_name="us.east-1")
+            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
             self.assertEqual(
-                len(w),
+                len(user_warnings),
                 1,
                 "{0} call should have generated one warning.".format(
                     WarnBulkSizeNoEffect
@@ -374,7 +375,7 @@ class TestSeriesHelper(TestCase):
             )
             self.assertIn(
                 "has no affect",
-                str(w[-1].message),
+                str(user_warnings[-1].message),
                 'Warning message did not contain "has not affect".',
             )
 

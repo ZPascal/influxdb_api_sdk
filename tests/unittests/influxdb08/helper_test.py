@@ -6,7 +6,7 @@ import warnings
 from unittest import TestCase
 from unittest.mock import MagicMock
 from influxdb.influxdb08 import SeriesHelper, InfluxDBClient
-from urllib3.exceptions import ConnectionError
+from urllib3.exceptions import MaxRetryError
 
 
 class TestSeriesHelper(TestCase):
@@ -194,7 +194,7 @@ class TestSeriesHelper(TestCase):
             warnings.simplefilter("always")
             # Server defined in the client is invalid, we're testing
             # the warning only.
-            with self.assertRaises(ConnectionError):
+            with self.assertRaises(MaxRetryError):
                 WarnBulkSizeZero(time=159, server_name="us.east-1")
 
         self.assertGreaterEqual(
