@@ -9,11 +9,7 @@ import unittest
 import warnings
 
 from tests.unittests import skip_if_pypy, using_pypy
-
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import urllib3_mock as requests_mock
+from tests.unittests import urllib3_mock as requests_mock
 
 from .client_test import _mocked_session
 

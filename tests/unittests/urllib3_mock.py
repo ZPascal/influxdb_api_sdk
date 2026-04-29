@@ -104,7 +104,7 @@ class _MockerContext:
         """Return all captured requests (alias for requests list)."""
         return self.requests
 
-    def _handle_request(self, method, url, fields=None, body=None, headers=None, **kwargs):
+    def _handle_request(self, method, url, fields=None, body=None, headers=None, **_kwargs):
         """Side-effect function that captures requests and returns mock responses."""
         full_url = url
         if fields:
