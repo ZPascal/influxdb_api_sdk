@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Example for sending batch information to InfluxDB via UDP."""
+"""Example for sending batch information to InfluxDB via UDP.
 
-"""
 INFO: In order to use UDP, one should enable the UDP service from the
 `influxdb.conf` under section
     [[udp]]
@@ -25,24 +24,15 @@ def main(uport):
     # NOTE: structure of the UDP packet is different than that of information
     #       sent via HTTP
     json_body = {
-        "tags": {
-            "host": "server01",
-            "region": "us-west"
-        },
-        "points": [{
-            "measurement": "cpu_load_short",
-            "fields": {
-                "value": 0.64
+        "tags": {"host": "server01", "region": "us-west"},
+        "points": [
+            {
+                "measurement": "cpu_load_short",
+                "fields": {"value": 0.64},
+                "time": "2009-11-10T23:00:00Z",
             },
-            "time": "2009-11-10T23:00:00Z",
-        },
-        {
-            "measurement": "cpu_load_short",
-            "fields": {
-                "value": 0.67
-            },
-            "time": "2009-11-10T23:05:00Z"
-        }]
+            {"measurement": "cpu_load_short", "fields": {"value": 0.67}, "time": "2009-11-10T23:05:00Z"},
+        ],
     }
 
     # make `use_udp` True and  add `udp_port` number from `influxdb.conf` file
@@ -55,13 +45,11 @@ def main(uport):
 
 def parse_args():
     """Parse the args."""
-    parser = argparse.ArgumentParser(
-        description='example code to play with InfluxDB along with UDP Port')
-    parser.add_argument('--uport', type=int, required=True,
-                        help=' UDP port of InfluxDB')
+    parser = argparse.ArgumentParser(description="example code to play with InfluxDB along with UDP Port")
+    parser.add_argument("--uport", type=int, required=True, help=" UDP port of InfluxDB")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     main(uport=args.uport)
