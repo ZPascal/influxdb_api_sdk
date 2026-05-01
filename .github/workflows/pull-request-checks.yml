@@ -53,7 +53,7 @@ jobs:
           enable-cache: false
 
       - name: Execute the linting checks
-        uses: astral-sh/ruff-action@v1
+        uses: astral-sh/ruff-action@v3
         with:
           args: "check"
 
