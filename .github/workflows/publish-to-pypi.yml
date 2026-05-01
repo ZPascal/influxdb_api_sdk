@@ -1,0 +1,56 @@
+name: Build and publish
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+      - name: Checkout the repository and the branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install the requirements
+        run: uv sync --all-extras
+
+      - name: Install pypa/build
+        run: uv pip install build
+
+      - name: Build a binary wheel and a source tarball
+        run: >-
+          uv run python -m
+          build
+          --sdist
+          --wheel
+          --outdir dist/
+
+      - name: Setup the GitHub user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Update the GitHub pages documentation
+        run: cd docs && uv run mkdocs gh-deploy --force && cd ..
+
+      - name: Publish distribution package to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

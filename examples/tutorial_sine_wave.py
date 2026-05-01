@@ -9,12 +9,12 @@ import time
 
 from influxdb import InfluxDBClient
 
-USER = 'root'
-PASSWORD = 'root'
-DBNAME = 'tutorial'
+USER = "root"
+PASSWORD = "root"
+DBNAME = "tutorial"
 
 
-def main(host='localhost', port=8086):
+def main(host="localhost", port=8086):
     """Define function to generate the sin wave."""
     now = datetime.datetime.today()
     points = []
@@ -22,13 +22,7 @@ def main(host='localhost', port=8086):
     for angle in range(0, 360):
         y = 10 + math.sin(math.radians(angle)) * 10
 
-        point = {
-            "measurement": 'foobar',
-            "time": int(now.strftime('%s')) + angle,
-            "fields": {
-                "value": y
-            }
-        }
+        point = {"measurement": "foobar", "time": int(now.strftime("%s")) + angle, "fields": {"value": y}}
         points.append(point)
 
     client = InfluxDBClient(host, port, USER, PASSWORD, DBNAME)
@@ -42,7 +36,7 @@ def main(host='localhost', port=8086):
 
     time.sleep(3)
 
-    query = 'SELECT * FROM foobar'
+    query = "SELECT * FROM foobar"
     print("Querying data: " + query)
     result = client.query(query, database=DBNAME)
     print("Result: {0}".format(result))
@@ -63,16 +57,12 @@ def main(host='localhost', port=8086):
 
 def parse_args():
     """Parse the args."""
-    parser = argparse.ArgumentParser(
-        description='example code to play with InfluxDB')
-    parser.add_argument('--host', type=str, required=False,
-                        default='localhost',
-                        help='hostname influxdb http API')
-    parser.add_argument('--port', type=int, required=False, default=8086,
-                        help='port influxdb http API')
+    parser = argparse.ArgumentParser(description="example code to play with InfluxDB")
+    parser.add_argument("--host", type=str, required=False, default="localhost", help="hostname influxdb http API")
+    parser.add_argument("--port", type=int, required=False, default=8086, help="port influxdb http API")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     main(host=args.host, port=args.port)

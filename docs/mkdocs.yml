@@ -1,0 +1,10 @@
+docs_dir: content
+markdown_extensions:
+- pymdownx.tasklist
+nav:
+- Home: index.md
+- API SDK:
+  - Model: influxdb/model.md
+repo_url: https://github.com/ZPascal/influxdb-python
+site_name: InfluxDB API SDK
+theme: material

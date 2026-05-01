@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "influxdb-api-sdk"
+version = "1.0.0"
+description = "A InfluxDB API SDK"
+readme = "README_old.md"
+license = {text = "Apache-2.0 License"}
+authors = [
+    {name = "Pascal Zimmermann", email = "info@theiotstudio.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "python-dateutil",
+    "pytz",
+    "urllib3",
+    "msgpack",
+]
+
+[project.urls]
+Source = "https://github.com/ZPascal/influxdb_api_sdk"
+"Bug Tracker" = "https://github.com/ZPascal/influxdb_api_sdk/issues"
+Documentation = "https://zpascal.github.io/influxdb_api_sdk/"
+
+[project.optional-dependencies]
+test = ["pytest>=8.3.5", "pytest-cov>=5.0.0", "pandas", "numpy", "genbadge[coverage]>=1.1.0"]
+dataframe = ["pandas", "numpy"]
+docs = ["pydoc-markdown==4.6.3", "mkdocs", "mkdocs-material"]
+dev = ["ruff>=0.5.0", "pytest>=8.3.5", "pytest-cov>=5.0.0", "genbadge[coverage]>=1.1.0", "pandas", "numpy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+ignore = ["E203", "E266", "E501"]
+select = ["B", "C", "D", "E", "F", "W"]
+exclude = ["venv", ".git"]
+
+[tool.coverage.run]
+branch = true
+omit = ["*/setup.py"]
+source = ["."]
+
+[tool.coverage.report]
+omit = ["*/setup.py"]
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
