@@ -509,8 +509,8 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "genbadge", extras = ["coverage"], marker = "extra == 'dev'", specifier = ">=1.1.0" },
-    { name = "genbadge", extras = ["coverage"], marker = "extra == 'test'", specifier = ">=1.1.0" },
+    { name = "genbadge", extras = ["coverage"], marker = "extra == 'dev'", specifier = ">=1.1.3" },
+    { name = "genbadge", extras = ["coverage"], marker = "extra == 'test'", specifier = ">=1.1.3" },
     { name = "mkdocs", marker = "extra == 'docs'" },
     { name = "mkdocs-material", marker = "extra == 'docs'" },
     { name = "msgpack" },
