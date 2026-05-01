@@ -27,7 +27,7 @@ Documentation = "https://zpascal.github.io/influxdb_api_sdk/"
 [project.optional-dependencies]
 test = ["pytest>=8.3.5", "pytest-cov>=5.0.0", "pandas", "numpy", "genbadge[coverage]>=1.1.0"]
 dataframe = ["pandas", "numpy"]
-docs = ["pydoc-markdown==4.6.3", "mkdocs", "mkdocs-material"]
+docs = ["pydoc-markdown==4.8.2", "mkdocs", "mkdocs-material"]
 dev = ["ruff>=0.5.0", "pytest>=8.3.5", "pytest-cov>=5.0.0", "genbadge[coverage]>=1.1.0", "pandas", "numpy"]
 
 [tool.pytest.ini_options]

@@ -318,43 +318,42 @@ toml = [
 
 [[package]]
 name = "databind"
-version = "1.5.3"
+version = "4.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "databind-core" },
-    { name = "databind-json" },
+    { name = "deprecated" },
+    { name = "nr-date" },
+    { name = "nr-stream" },
+    { name = "typeapi" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/78/abf782e9f44f276cfb8a0ef245d9b3351364952430293b080c4c47b1ee9d/databind-1.5.3.tar.gz", hash = "sha256:a1986c1a2054d28d064cf7900c2d3f03850ace124331fa026e6049f390742122", size = 1604, upload-time = "2022-07-16T21:53:11.621Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/9e/835a5211eeb7228a0e3870d54def48dd7951dbd951f51b30900020a5f9fc/databind-4.5.4.tar.gz", hash = "sha256:342e170a219b1661e5c1b20778b532aecfa67e46560ba75beb7e2c6faa2150b5", size = 43193, upload-time = "2026-04-02T22:21:47.318Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/a5/6402b5401a91adc9060776f80ab875c812496bdbe3ae7b916afd62d8a0da/databind-1.5.3-py3-none-any.whl", hash = "sha256:43d76e3b931ed9d986b5e35df60e37ccb0bcb2b3b57d6f44cce085c48abe7016", size = 1566, upload-time = "2022-07-04T09:12:02.068Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/db/3b8eb860b5baef89b72c7aadcc5072e1648ca0c98d6ba4b9e4eabbdc2cf5/databind-4.5.4-py3-none-any.whl", hash = "sha256:78467f874a3e80bcd1d3de349167587a0d369831bc64c03798520be86074f96e", size = 52381, upload-time = "2026-04-02T22:21:45.389Z" },
 ]
 
 [[package]]
 name = "databind-core"
-version = "1.5.3"
+version = "4.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "deprecated" },
-    { name = "nr-util" },
-    { name = "typing-extensions" },
+    { name = "databind" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/2f/332fac91bfee49280861dbb33b44a2ee3f6be6cedb977ed014283ac1cfde/databind.core-1.5.3.tar.gz", hash = "sha256:663dd0ccfd1b181cbcfb8315226ec8df78bcd65c1b43875ba18d89702d15efbe", size = 27425, upload-time = "2022-07-16T21:53:12.769Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/dc/b63a6f6a404146e8e3f1226c9243a5cb30784a1f75218d014cafce9a411f/databind_core-4.5.4.tar.gz", hash = "sha256:a7a47af183d4a8046c893fc19fa9c085f287a15e57a05e58345016086ce0f807", size = 974, upload-time = "2026-04-02T22:21:56.588Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/65/c13c23f64fab65ef12f6b8cdefbcb67966faaedd3d533cb75df70e62dff9/databind.core-1.5.3-py3-none-any.whl", hash = "sha256:105665947e0b0b4709b6dab99cd3cea31d16f5c0d68fe867e4dc2f47585669fb", size = 35091, upload-time = "2022-07-16T21:53:08.08Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/cf/1d1f4d37b4112f26ea5086d54200837d1dcbddaa536f3a70bb1d8b48ed9a/databind_core-4.5.4-py3-none-any.whl", hash = "sha256:25482c352f4f6fcade7c106c665553a18febeccda2972c00cf5af19f473960ab", size = 1666, upload-time = "2026-04-02T22:21:55.504Z" },
 ]
 
 [[package]]
 name = "databind-json"
-version = "1.5.3"
+version = "4.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "databind-core" },
-    { name = "nr-util" },
-    { name = "typing-extensions" },
+    { name = "databind" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/8b/11efd4fd4acaa6c80716dcb42806d96878da51aeb42605ac8633f28f431a/databind.json-1.5.3.tar.gz", hash = "sha256:b8785ad9689b98d524d4c96e0756bc41166da0de44cc9d14ed2fa8aea5674507", size = 9560, upload-time = "2022-07-16T21:53:14.189Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/72/9af59950a23ff6a03062acd85879de289595168ec43d6cec57253d00497c/databind_json-4.5.4.tar.gz", hash = "sha256:2c714f9c3039a81e42fc3826e47d7826ef020d93131c34daf4c9ae0483108e4d", size = 966, upload-time = "2026-04-02T22:22:05.538Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/bf/36d69fdfaddba9c8d0c2790d0aed5a364ece55d018a68f75e82aab4506e7/databind.json-1.5.3-py3-none-any.whl", hash = "sha256:fd6702ca9f67b15414e573935bf4a5ccb221f3f810553a054b832393c057df3d", size = 14295, upload-time = "2022-07-16T21:53:09.975Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/d4/e00d531202314e29d90c9496f6b4730e3647128b9866180b8ce8ebb79394/databind_json-4.5.4-py3-none-any.whl", hash = "sha256:22e6faaeb6f2ec5cf815fd597a539dfe1f4846b80b618760112f4fe59a0898cc", size = 1664, upload-time = "2026-04-02T22:22:04.204Z" },
 ]
 
 [[package]]
@@ -380,29 +379,30 @@ wheels = [
 
 [[package]]
 name = "docspec"
-version = "2.1.2"
+version = "2.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "databind" },
+    { name = "databind-core" },
+    { name = "databind-json" },
     { name = "deprecated" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/c2/05931142724e35b0f5cd78034f3a0c14e4c743ec1ef6539696b37a0ae24f/docspec-2.1.2.tar.gz", hash = "sha256:0edb90f4c54edbd43170875dece7a50750a21e95a4c5faf3f7e655d01d483fa7", size = 8492, upload-time = "2023-03-15T23:30:35.495Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8b/fe/1ad244d0ca186b5386050ec30dfd59bd3dbeea5baec33ca861dd43b922e6/docspec-2.2.2.tar.gz", hash = "sha256:c772c6facfce839176b647701082c7a22b3d22d872d392552cf5d65e0348c919", size = 14086, upload-time = "2025-05-06T12:39:59.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/4a/3d4ca9d243b894b0a8f7a198a26f2132b1a9740379dc586e6b2656bf8db4/docspec-2.1.2-py3-none-any.whl", hash = "sha256:19168242b1e6ca39553feba91b6284479e2bfdf6500949ce63e10c49354d00d7", size = 9683, upload-time = "2023-03-15T23:30:32.479Z" },
+    { url = "https://files.pythonhosted.org/packages/38/57/1011f2e88743a818cced9a95d54200ba6a05decaf43fd91d8c6ed9f6470d/docspec-2.2.2-py3-none-any.whl", hash = "sha256:854d25401e7ec2d155b0c1e001e25819d16b6df3a7575212a7f340ae8b00122e", size = 9726, upload-time = "2025-05-06T12:39:58.047Z" },
 ]
 
 [[package]]
 name = "docspec-python"
-version = "2.1.2"
+version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "black" },
     { name = "docspec" },
     { name = "nr-util" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/d3/77bd867892fc15b57656947d77d6cd919a1be86a6dcec7c88b089b8eef74/docspec_python-2.1.2.tar.gz", hash = "sha256:a7f884de3559bab8fd4dd89cc0017dc2ec05e09ff122ba30f142a315b107bdec", size = 13849, upload-time = "2023-03-15T23:30:37.036Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/52/88/99c5e27a894f01290364563c84838cf68f1a8629474b5bbfc3bf35a8d923/docspec_python-2.2.1.tar.gz", hash = "sha256:c41b850b4d6f4de30999ea6f82c9cdb9183d9bcba45559ee9173d3dab7281559", size = 13838, upload-time = "2023-05-28T11:24:19.846Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/fe/3e37614f388fe076f6f94e1871eb58fa7dfa4fe4bf3aad5e448fba80fee3/docspec_python-2.1.2-py3-none-any.whl", hash = "sha256:ad32f73ef1caca36d81171f19e86861932f53a589040c5deb4d9b85b79be8d3d", size = 16094, upload-time = "2023-03-15T23:30:34.267Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/49/b8d1a2fa01b6f7a1a9daa1d485efc7684489028d6a356fc2bc5b40131061/docspec_python-2.2.1-py3-none-any.whl", hash = "sha256:76ac41d35a8face35b2d766c2e8a416fb8832359785d396f0d53bcb00f178e54", size = 16093, upload-time = "2023-05-28T11:24:17.261Z" },
 ]
 
 [[package]]
@@ -520,7 +520,7 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'dataframe'" },
     { name = "pandas", marker = "extra == 'dev'" },
     { name = "pandas", marker = "extra == 'test'" },
-    { name = "pydoc-markdown", marker = "extra == 'docs'", specifier = "==4.6.3" },
+    { name = "pydoc-markdown", marker = "extra == 'docs'", specifier = "==4.8.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.5" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
@@ -793,6 +793,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8dac321cda606860fa4548858c0cc45d9d1d4ca2628b/mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558", size = 6343, upload-time = "2025-04-22T14:54:24.164Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505", size = 4963, upload-time = "2025-04-22T14:54:22.983Z" },
+]
+
+[[package]]
+name = "nr-date"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/92/08110dd3d7ff5e2b852a220752eb6c40183839f5b7cc91f9f38dd2298e7d/nr_date-2.1.0.tar.gz", hash = "sha256:0643aea13bcdc2a8bc56af9d5e6a89ef244c9744a1ef00cdc735902ba7f7d2e6", size = 8789, upload-time = "2023-08-16T13:46:04.114Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/10/1d2b00172537c1522fe64bbc6fb16b015632a02f7b3864e788ccbcb4dd85/nr_date-2.1.0-py3-none-any.whl", hash = "sha256:bd672a9dfbdcf7c4b9289fea6750c42490eaee08036a72059dcc78cb236ed568", size = 10496, upload-time = "2023-08-16T13:46:02.627Z" },
+]
+
+[[package]]
+name = "nr-stream"
+version = "1.1.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/37/e4d36d852c441233c306c5fbd98147685dce3ac9b0a8bbf4a587d0ea29ea/nr_stream-1.1.5.tar.gz", hash = "sha256:eb0216c6bfc61a46d4568dba3b588502c610ec8ddef4ac98f3932a2bd7264f65", size = 10053, upload-time = "2023-02-14T22:44:09.074Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/e1/f93485fe09aa36c0e1a3b76363efa1791241f7f863a010f725c95e8a74fe/nr_stream-1.1.5-py3-none-any.whl", hash = "sha256:47e12150b331ad2cb729cfd9d2abd281c9949809729ba461c6aa87dd9927b2d4", size = 10448, upload-time = "2023-02-14T22:44:07.72Z" },
 ]
 
 [[package]]
@@ -1237,11 +1255,12 @@ wheels = [
 
 [[package]]
 name = "pydoc-markdown"
-version = "4.6.3"
+version = "4.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
-    { name = "databind" },
+    { name = "databind-core" },
+    { name = "databind-json" },
     { name = "docspec" },
     { name = "docspec-python" },
     { name = "docstring-parser" },
@@ -1254,9 +1273,9 @@ dependencies = [
     { name = "watchdog" },
     { name = "yapf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/5f/86ecab5434b27d40032add14f6837feb7827cc21c4062fe539687be6e0f3/pydoc-markdown-4.6.3.tar.gz", hash = "sha256:82aa424de7e390e4a34ac200b189bb011e33be18bb089e83b15af5742cf21dc7", size = 41952, upload-time = "2022-03-13T13:47:43.844Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/8a/2c7f7ad656d22371a596d232fc140327b958d7f1d491b889632ea0cb7e87/pydoc_markdown-4.8.2.tar.gz", hash = "sha256:fb6c927e31386de17472d42f9bd3d3be2905977d026f6216881c65145aa67f0b", size = 44506, upload-time = "2023-06-26T12:37:01.152Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/7b/300c8649ac775a5e90921ad251beae34d82e6ad167e38b279312474cfa7d/pydoc_markdown-4.6.3-py3-none-any.whl", hash = "sha256:b79da5b972be5c24db41ed5ce65fedd0031aa9cd023467d42cd47882a5e92f98", size = 64248, upload-time = "2022-03-13T13:47:42.277Z" },
+    { url = "https://files.pythonhosted.org/packages/83/5a/ce0b056d9a95fd0c06a6cfa5972477d79353392d19230c748a7ba5a9df04/pydoc_markdown-4.8.2-py3-none-any.whl", hash = "sha256:203f74119e6bb2f9deba43d452422de7c8ec31955b61e0620fa4dd8c2611715f", size = 67830, upload-time = "2023-06-26T12:36:59.502Z" },
 ]
 
 [[package]]
@@ -1471,6 +1490,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/19/75/241269d1da26b624c0d5e110e8149093c759b7a286138f4efd61a60e75fe/tomli_w-1.2.0.tar.gz", hash = "sha256:2dd14fac5a47c27be9cd4c976af5a12d87fb1f0b4512f81d69cce3b35ae25021", size = 7184, upload-time = "2025-01-15T12:07:24.262Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/18/c86eb8e0202e32dd3df50d43d7ff9854f8e0603945ff398974c1d91ac1ef/tomli_w-1.2.0-py3-none-any.whl", hash = "sha256:188306098d013b691fcadc011abd66727d3c414c571bb01b1a174ba8c983cf90", size = 6675, upload-time = "2025-01-15T12:07:22.074Z" },
+]
+
+[[package]]
+name = "typeapi"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/92/5a23ad34aa877edf00906166e339bfdc571543ea183ea7ab727bb01516c7/typeapi-2.3.0.tar.gz", hash = "sha256:a60d11f72c5ec27338cfd1c807f035b0b16ed2e3b798fb1c1d34fc5589f544be", size = 122687, upload-time = "2025-10-23T13:44:11.26Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/84/021bbeb7edb990dd6875cb6ab08d32faaa49fec63453d863730260a01f9e/typeapi-2.3.0-py3-none-any.whl", hash = "sha256:576b7dcb94412e91c5cae107a393674f8f99c10a24beb8be2302e3fed21d5cc2", size = 26858, upload-time = "2025-10-23T13:44:09.833Z" },
 ]
 
 [[package]]
