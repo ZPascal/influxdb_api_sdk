@@ -1,6 +1,41 @@
+site_name: InfluxDB API SDK
+
+repo_url: https://github.com/ZPascal/influxdb_api_sdk
+repo_name: ZPascal/influxdb_api_sdk
+
 docs_dir: content
-markdown_extensions:
-- pymdownx.tasklist
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [..]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+            inherited_members: false
+            docstring_options:
+              warn_unknown_params: false
+      enable_inventory: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
 nav:
 - Home: index.md
 - API SDK:

@@ -58,23 +58,25 @@ class DataFrameClient(InfluxDBClient):
     ):
         """Write to multiple time series names.
 
-        :param dataframe: data points in a DataFrame
-        :param measurement: name of measurement
-        :param tags: dictionary of tags, with string key-values
-        :param tag_columns: [Optional, default None] List of data tag names
-        :param field_columns: [Options, default None] List of data field names
-        :param time_precision: [Optional, default None] Either 's', 'ms', 'u'
-            or 'n'.
-        :param batch_size: [Optional] Value to write the points in batches
-            instead of all at one time. Useful for when doing data dumps from
-            one database to another or when doing a massive write operation
-        :type batch_size: int
-        :param protocol: Protocol for writing data. Either 'line' or 'json'.
-        :param numeric_precision: Precision for floating point values.
-            Either None, 'full' or some int, where int is the desired decimal
-            precision. 'full' preserves full precision for int and float
-            datatypes. Defaults to None, which preserves 14-15 significant
-            figures for float and all significant figures for int datatypes.
+        Args:
+            dataframe (pd.DataFrame): data points in a DataFrame
+            measurement (str): name of measurement
+            tags (dict): dictionary of tags, with string key-values
+            tag_columns (list): [Optional, default None] List of data tag names
+            field_columns (list): [Optional, default None] List of data field names
+            time_precision (str): [Optional, default None] Either 's', 'ms', 'u' or 'n'.
+            database (str): [Optional] database to write to
+            retention_policy (str): [Optional] retention policy to write to
+            batch_size (int): [Optional] Value to write the points in batches
+                instead of all at one time. Useful for when doing data dumps from
+                one database to another or when doing a massive write operation
+            protocol (str): Protocol for writing data. Either 'line' or 'json'.
+            numeric_precision (str or int): Precision for floating point values.
+                Either None, 'full' or some int, where int is the desired decimal
+                precision. 'full' preserves full precision for int and float
+                datatypes. Defaults to None, which preserves 14-15 significant
+                figures for float and all significant figures for int datatypes.
+
         """
         if tag_columns is None:
             tag_columns = []
@@ -160,35 +162,37 @@ class DataFrameClient(InfluxDBClient):
     ):
         """Query data into a DataFrame.
 
-        .. danger::
-            In order to avoid injection vulnerabilities (similar to `SQL
-            injection <https://www.owasp.org/index.php/SQL_Injection>`_
-            vulnerabilities), do not directly include untrusted data into the
-            ``query`` parameter, use ``bind_params`` instead.
+        Warning:
+            In order to avoid injection vulnerabilities (similar to SQL injection),
+            do not directly include untrusted data into the query parameter,
+            use bind_params instead.
 
-        :param query: the actual query string
-        :param params: additional parameters for the request, defaults to {}
-        :param bind_params: bind parameters for the query:
-            any variable in the query written as ``'$var_name'`` will be
-            replaced with ``bind_params['var_name']``. Only works in the
-            ``WHERE`` clause and takes precedence over ``params['params']``
-        :param epoch: response timestamps to be in epoch format either 'h',
-            'm', 's', 'ms', 'u', or 'ns',defaults to `None` which is
-            RFC3339 UTC format with nanosecond precision
-        :param expected_response_code: the expected status code of response,
-            defaults to 200
-        :param database: database to query, defaults to None
-        :param raise_errors: Whether or not to raise exceptions when InfluxDB
-            returns errors, defaults to True
-        :param chunked: Enable to use chunked responses from InfluxDB.
-            With ``chunked`` enabled, one ResultSet is returned per chunk
-            containing all results within that chunk
-        :param chunk_size: Size of each chunk to tell InfluxDB to use.
-        :param dropna: drop columns where all values are missing
-        :param data_frame_index: the list of columns that
-            are used as DataFrame index
-        :returns: the queried data
-        :rtype: :class:`~.ResultSet`
+        Args:
+            query (str): the actual query string
+            params (dict): additional parameters for the request, defaults to {}
+            bind_params (dict): bind parameters for the query:
+                any variable in the query written as '$var_name' will be
+                replaced with bind_params['var_name']. Only works in the
+                WHERE clause and takes precedence over params['params']
+            epoch (str): response timestamps to be in epoch format either 'h',
+                'm', 's', 'ms', 'u', or 'ns', defaults to None which is
+                RFC3339 UTC format with nanosecond precision
+            expected_response_code (int): the expected status code of response,
+                defaults to 200
+            database (str): database to query, defaults to None
+            raise_errors (bool): Whether or not to raise exceptions when InfluxDB
+                returns errors, defaults to True
+            chunked (bool): Enable to use chunked responses from InfluxDB.
+                With chunked enabled, one ResultSet is returned per chunk
+                containing all results within that chunk
+            chunk_size (int): Size of each chunk to tell InfluxDB to use.
+            method (str): the HTTP method for the request, defaults to GET
+            dropna (bool): drop columns where all values are missing
+            data_frame_index (list): the list of columns that are used as DataFrame index
+
+        Returns:
+            ResultSet or dict: the queried data
+
         """
         query_args = {
             "params": params,

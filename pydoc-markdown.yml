@@ -1,6 +1,6 @@
 loaders:
   - type: python
-    search_path: [influxdb]
+    search_path: [.]
 processors:
   - type: filter
   - type: smart
@@ -11,11 +11,6 @@ renderer:
     - title: Home
       name: index
       source: docs/influxdb.md
-    - title: API SDK
-      name: influxdb
-      children:
-        - title: Model
-          contents: [ model.* ]
   mkdocs_config:
     site_name: InfluxDB API SDK
     theme: material

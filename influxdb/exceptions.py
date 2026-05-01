@@ -11,7 +11,13 @@ class InfluxDBClientError(Exception):
     """Raised when an error occurs in the request."""
 
     def __init__(self, content, code=None):
-        """Initialize the InfluxDBClientError handler."""
+        """Initialize the InfluxDBClientError.
+
+        Args:
+            content (str or bytes): the error message content
+            code (int): optional error code
+
+        """
         if isinstance(content, type(b"")):
             content = content.decode("UTF-8", "replace")
 
@@ -29,5 +35,10 @@ class InfluxDBServerError(Exception):
     """Raised when a server error occurs."""
 
     def __init__(self, content):
-        """Initialize the InfluxDBServerError handler."""
+        """Initialize the InfluxDBServerError.
+
+        Args:
+            content (str): the error message content
+
+        """
         super(InfluxDBServerError, self).__init__(content)

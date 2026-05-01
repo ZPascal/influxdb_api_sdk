@@ -17,7 +17,13 @@ class ResultSet(object):
     """A wrapper around a single InfluxDB query result."""
 
     def __init__(self, series, raise_errors=True):
-        """Initialize the ResultSet."""
+        """Initialize the ResultSet.
+
+        Args:
+            series (dict): the series data from InfluxDB
+            raise_errors (bool): whether to raise exceptions on errors, defaults to True
+
+        """
         self._raw = series
         self._error = self._raw.get("error", None)
 
@@ -41,17 +47,21 @@ class ResultSet(object):
     def __getitem__(self, key):
         """Retrieve the series name or specific set based on key.
 
-        :param key: Either a series name, or a tags_dict, or
-                    a 2-tuple(series_name, tags_dict).
-                    If the series name is None (or not given) then any serie
-                    matching the eventual given tags will be given its points
-                    one after the other.
-                    To get the points of every series in this resultset then
-                    you have to provide None as key.
-        :return: A generator yielding `Point`s matching the given key.
-        NB:
-        The order in which the points are yielded is actually undefined but
-        it might change..
+        Args:
+            key: Either a series name, or a tags_dict, or a 2-tuple(series_name, tags_dict).
+                If the series name is None (or not given) then any serie
+                matching the eventual given tags will be given its points
+                one after the other.
+                To get the points of every series in this resultset then
+                you have to provide None as key.
+
+        Returns:
+            generator: A generator yielding Points matching the given key.
+
+        Note:
+            ResultSet's __getitem__ method will be deprecated. Use get_points instead.
+            The order in which the points are yielded is actually undefined but it might change.
+
         """
         warnings.warn(
             ("ResultSet's ``__getitem__`` method will be deprecated. Use``get_points`` instead."),
@@ -80,13 +90,16 @@ class ResultSet(object):
     def get_points(self, measurement=None, tags=None):
         """Return a generator for all the points that match the given filters.
 
-        :param measurement: The measurement name
-        :type measurement: str
+        Args:
+            measurement (str): The measurement name
+            tags (dict): Tags to look for
 
-        :param tags: Tags to look for
-        :type tags: dict
+        Returns:
+            generator: Points generator
 
-        :return: Points generator
+        Raises:
+            TypeError: if measurement is not str or None
+
         """
         # Raise error if measurement is not str or bytes
         if not isinstance(measurement, (bytes, type(b"".decode()), type(None))):
@@ -149,7 +162,9 @@ class ResultSet(object):
     def keys(self):
         """Return the list of keys in the ResultSet.
 
-        :return: List of keys. Keys are tuples (series_name, tags)
+        Returns:
+            list: List of keys. Keys are tuples (series_name, tags)
+
         """
         keys = []
         for series in self._get_series():
@@ -164,7 +179,9 @@ class ResultSet(object):
     def items(self):
         """Return the set of items from the ResultSet.
 
-        :return: List of tuples, (key, generator)
+        Returns:
+            list: List of tuples, (key, generator)
+
         """
         items = []
         for series in self._get_series():
@@ -178,8 +195,12 @@ class ResultSet(object):
     def _get_points_for_series(self, series):
         """Return generator of dict from columns and values of a series.
 
-        :param series: One series
-        :return: Generator of dicts
+        Args:
+            series (dict): One series
+
+        Returns:
+            generator: Generator of dicts
+
         """
         for point in series.get("values", []):
             yield self.point_from_cols_vals(series["columns"], point)
@@ -188,9 +209,13 @@ class ResultSet(object):
     def point_from_cols_vals(cols, vals):
         """Create a dict from columns and values lists.
 
-        :param cols: List of columns
-        :param vals: List of values
-        :return: Dict where keys are columns.
+        Args:
+            cols (list): List of columns
+            vals (list): List of values
+
+        Returns:
+            dict: Dict where keys are columns.
+
         """
         point = {}
         for col_index, col_name in enumerate(cols):
