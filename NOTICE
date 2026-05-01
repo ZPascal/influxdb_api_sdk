@@ -1,0 +1,7 @@
+This project includes software originally developed by InfluxDB
+and licensed under the MIT License.
+
+Original project: https://github.com/influxdata/influxdb-python
+Original license: See license file in the original project.
+
+This fork is licensed under the Apache License 2.0.
