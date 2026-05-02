@@ -31,63 +31,46 @@ from .exceptions import InfluxDBServerError
 class InfluxDBClient(object):
     """InfluxDBClient primary client object to connect InfluxDB.
 
-    The :class:`~.InfluxDBClient` object holds information necessary to
-    connect to InfluxDB. Requests can be made to InfluxDB directly through
-    the client.
+    The `InfluxDBClient` object holds information necessary to connect to
+    InfluxDB. Requests can be made to InfluxDB directly through the client.
 
-    The client supports the use as a `context manager
-    <https://docs.python.org/3/reference/datamodel.html#context-managers>`_.
+    The client supports use as a [context manager](
+    https://docs.python.org/3/reference/datamodel.html#context-managers).
 
-    :param host: hostname to connect to InfluxDB, defaults to 'localhost'
-    :type host: str
-    :param port: port to connect to InfluxDB, defaults to 8086
-    :type port: int
-    :param username: user to connect, defaults to 'root'
-    :type username: str
-    :param password: password of the user, defaults to 'root'
-    :type password: str
-    :param pool_size: urllib3 connection pool size, defaults to 10.
-    :type pool_size: int
-    :param database: database name to connect to, defaults to None
-    :type database: str
-    :param ssl_usage: use https instead of http to connect to InfluxDB, defaults to
-        False
-    :type ssl_usage: bool
-    :param ssl_context: Forward the SSL context for HTTPS requests, defaults to
-        ssl.create_default_context()
-    :type ssl_context: ssl.SSLContext
-    :param timeout: number of seconds Requests will wait for your client to
-        establish a connection, defaults to None
-    :type timeout: int
-    :param retries: number of attempts your client will make before aborting,
-        defaults to 3
-        0 - try until success
-        1 - attempt only once (without retry)
-        2 - maximum two attempts (including one retry)
-        3 - maximum three attempts (default option)
-    :type retries: int
-    :param use_udp: use UDP to connect to InfluxDB, defaults to False
-    :type use_udp: bool
-    :param udp_port: UDP port to connect to InfluxDB, defaults to 4444
-    :type udp_port: int
-    :param proxies: HTTP(S) proxy to use for Requests, defaults to {}
-    :type proxies: dict
-    :param path: path of InfluxDB on the server to connect, defaults to ''
-    :type path: str
-    :param gzip: use gzip content encoding to compress requests
-    :type gzip: bool
-    :param session: allow for the new client request to use an existing
-        requests Session, defaults to None
-    :type session: requests.Session
-    :param headers: headers to add to Requests, will add 'Content-Type'
-        and 'Accept' unless these are already present, defaults to {}
-    :type headers: dict
-    :param socket_options: use custom tcp socket options,
-        If not specified, then defaults are loaded from
-        ``HTTPConnection.default_socket_options``
-    :type socket_options: list
+    Args:
+        host (str): hostname to connect to InfluxDB, defaults to 'localhost'
+        port (int): port to connect to InfluxDB, defaults to 8086
+        username (str): user to connect, defaults to 'root'
+        password (str): password of the user, defaults to 'root'
+        pool_size (int): urllib3 connection pool size, defaults to 10
+        database (str): database name to connect to, defaults to None
+        ssl_usage (bool): use https instead of http to connect to InfluxDB,
+            defaults to False
+        ssl_context (ssl.SSLContext): Forward the SSL context for HTTPS requests,
+            defaults to ssl.create_default_context()
+        timeout (int): number of seconds Requests will wait for your client to
+            establish a connection, defaults to None
+        retries (int): number of attempts your client will make before aborting,
+            defaults to 3.
+            0 - try until success,
+            1 - attempt only once (without retry),
+            2 - maximum two attempts (including one retry),
+            3 - maximum three attempts (default option)
+        use_udp (bool): use UDP to connect to InfluxDB, defaults to False
+        udp_port (int): UDP port to connect to InfluxDB, defaults to 4444
+        proxies (dict): HTTP(S) proxy to use for Requests, defaults to {}
+        path (str): path of InfluxDB on the server to connect, defaults to ''
+        gzip (bool): use gzip content encoding to compress requests
+        session: allow for the new client request to use an existing urllib3
+            PoolManager session, defaults to None
+        headers (dict): headers to add to Requests, will add 'Content-Type'
+            and 'Accept' unless these are already present, defaults to {}
+        socket_options (list): use custom tcp socket options. If not specified,
+            then defaults are loaded from ``HTTPConnection.default_socket_options``
 
-    :raises ValueError: if ssl_usage is disabled but the ssl context is provided (set to False)
+    Raises:
+        ValueError: if ssl_usage is disabled but the ssl context is provided
+
     """
 
     def __init__(
@@ -205,34 +188,32 @@ class InfluxDBClient(object):
     def from_dsn(cls, dsn, **kwargs):
         r"""Generate an instance of InfluxDBClient from given data source name.
 
-        Return an instance of :class:`~.InfluxDBClient` from the provided
-        data source name. Supported schemes are "influxdb", "https+influxdb"
-        and "udp+influxdb". Parameters for the :class:`~.InfluxDBClient`
-        constructor may also be passed to this method.
+        Return an instance of `InfluxDBClient` from the provided data source
+        name. Supported schemes are "influxdb", "https+influxdb" and
+        "udp+influxdb". Parameters for the `InfluxDBClient` constructor may
+        also be passed to this method.
 
-        :param dsn: data source name
-        :type dsn: string
-        :param kwargs: additional parameters for `InfluxDBClient`
-        :type kwargs: dict
-        :raises ValueError: if the provided DSN has any unexpected values
+        Args:
+            dsn (str): data source name
+            **kwargs: additional parameters for `InfluxDBClient`
 
-        :Example:
+        Raises:
+            ValueError: if the provided DSN has any unexpected values
 
-        ::
+        Example:
+            ```python
+            cli = InfluxDBClient.from_dsn(
+                'influxdb://username:password@localhost:8086/databasename',
+                timeout=5
+            )
+            ```
 
-            >> cli = InfluxDBClient.from_dsn('influxdb://username:password@\
-            localhost:8086/databasename', timeout=5)
-            >> type(cli)
-            <class 'influxdb.client.InfluxDBClient'>
-            >> cli = InfluxDBClient.from_dsn('udp+influxdb://username:pass@\
-            localhost:8086/databasename', timeout=5, udp_port=159)
-            >> print('{0._baseurl} - {0.use_udp} {0.udp_port}'.format(cli))
-            http://localhost:8086 - True 159
+        Note:
+            Parameters provided in `**kwargs` may override dsn parameters.
+            When using "udp+influxdb" the specified port (if any) will be used
+            for the TCP connection; specify the UDP port with the additional
+            `udp_port` parameter.
 
-        .. note:: parameters provided in `**kwargs` may override dsn parameters
-        .. note:: when using "udp+influxdb" the specified port (if any) will
-            be used for the TCP connection; specify the UDP port with the
-            additional `udp_port` parameter (cf. examples).
         """
         init_args = _parse_dsn(dsn)
         host, port = init_args.pop("hosts")[0]
@@ -245,18 +226,19 @@ class InfluxDBClient(object):
     def switch_database(self, database):
         """Change the client's database.
 
-        :param database: the name of the database to switch to
-        :type database: str
+        Args:
+            database (str): the name of the database to switch to
+
         """
         self._database = database
 
     def switch_user(self, username, password):
         """Change the client's username.
 
-        :param username: the username to switch to
-        :type username: str
-        :param password: the password for the username
-        :type password: str
+        Args:
+            username (str): the username to switch to
+            password (str): the password for the username
+
         """
         self._username = username
         self._password = password
@@ -273,27 +255,24 @@ class InfluxDBClient(object):
     ):
         """Make a HTTP request to the InfluxDB API.
 
-        :param url: the path of the HTTP request, e.g. write, query, etc.
-        :type url: str
-        :param method: the HTTP method for the request, defaults to GET
-        :type method: str
-        :param params: additional parameters for the request, defaults to None
-        :type params: dict
-        :param data: the data of the request, defaults to None
-        :type data: str
-        :param stream: True if a query uses chunked responses
-        :type stream: bool
-        :param expected_response_code: the expected response code of
-            the request, defaults to 200
-        :type expected_response_code: int
-        :param headers: headers to add to the request
-        :type headers: dict
-        :returns: the response from the request
-        :rtype: :class:`requests.Response`
-        :raises InfluxDBServerError: if the response code is any server error
-            code (5xx)
-        :raises InfluxDBClientError: if the response code is not the
-            same as `expected_response_code` and is not a server error code
+        Args:
+            url (str): the path of the HTTP request, e.g. write, query, etc.
+            method (str): the HTTP method for the request, defaults to GET
+            params (dict): additional parameters for the request, defaults to None
+            data (str): the data of the request, defaults to None
+            stream (bool): True if a query uses chunked responses
+            expected_response_code (int): the expected response code of
+                the request, defaults to 200
+            headers (dict): headers to add to the request
+
+        Returns:
+            urllib3.response.BaseHTTPResponse: the response from the request
+
+        Raises:
+            InfluxDBServerError: if the response code is any server error code (5xx)
+            InfluxDBClientError: if the response code is not the same as
+                `expected_response_code` and is not a server error code
+
         """
         url = "{0}/{1}".format(self._baseurl, url)
 
@@ -386,19 +365,18 @@ class InfluxDBClient(object):
     def write(self, data, params=None, expected_response_code=204, protocol="json"):
         """Write data to InfluxDB.
 
-        :param data: the data to be written
-        :type data: (if protocol is 'json') dict
-                    (if protocol is 'line') sequence of line protocol strings
-                                            or single string
-        :param params: additional parameters for the request, defaults to None
-        :type params: dict
-        :param expected_response_code: the expected response code of the write
-            operation, defaults to 204
-        :type expected_response_code: int
-        :param protocol: protocol of input data, either 'json' or 'line'
-        :type protocol: str
-        :returns: True, if the write operation is successful
-        :rtype: bool
+        Args:
+            data: the data to be written.
+                If protocol is 'json': dict.
+                If protocol is 'line': sequence of line protocol strings or single string.
+            params (dict): additional parameters for the request, defaults to None
+            expected_response_code (int): the expected response code of the write
+                operation, defaults to 204
+            protocol (str): protocol of input data, either 'json' or 'line'
+
+        Returns:
+            bool: True, if the write operation is successful
+
         """
         headers = self._headers.copy()
         headers["Content-Type"] = "application/octet-stream"
@@ -454,54 +432,31 @@ class InfluxDBClient(object):
     ):
         """Send a query to InfluxDB.
 
-        .. danger::
-            In order to avoid injection vulnerabilities (similar to `SQL
-            injection <https://www.owasp.org/index.php/SQL_Injection>`_
-            vulnerabilities), do not directly include untrusted data into the
-            ``query`` parameter, use ``bind_params`` instead.
+        Warning:
+            In order to avoid injection vulnerabilities (similar to SQL injection),
+            do not directly include untrusted data into the query parameter,
+            use bind_params instead.
 
-        :param query: the actual query string
-        :type query: str
+        Args:
+            query (str): the actual query string
+            params (dict): additional parameters for the request, defaults to {}
+            bind_params (dict): bind parameters for the query:
+                any variable in the query written as '$var_name' will be
+                replaced with bind_params['var_name']. Only works in the
+                WHERE clause and takes precedence over params['params']
+            epoch (str): response timestamps to be in epoch format either 'h', 'm', 's', 'ms', 'u', or 'ns',
+                defaults to None which is RFC3339 UTC format with nanosecond precision
+            expected_response_code (int): the expected status code of response, defaults to 200
+            database (str): database to query, defaults to None
+            raise_errors (bool): Whether or not to raise exceptions when InfluxDB returns errors, defaults to True
+            chunked (bool): Enable to use chunked responses from InfluxDB.
+                With chunked enabled, one ResultSet is returned per chunk containing all results within that chunk
+            chunk_size (int): Size of each chunk to tell InfluxDB to use.
+            method (str): the HTTP method for the request, defaults to GET
 
-        :param params: additional parameters for the request,
-            defaults to {}
-        :type params: dict
+        Returns:
+            ResultSet or list: the queried data
 
-        :param bind_params: bind parameters for the query:
-            any variable in the query written as ``'$var_name'`` will be
-            replaced with ``bind_params['var_name']``. Only works in the
-            ``WHERE`` clause and takes precedence over ``params['params']``
-        :type bind_params: dict
-
-        :param epoch: response timestamps to be in epoch format either 'h',
-            'm', 's', 'ms', 'u', or 'ns',defaults to `None` which is
-            RFC3339 UTC format with nanosecond precision
-        :type epoch: str
-
-        :param expected_response_code: the expected status code of response,
-            defaults to 200
-        :type expected_response_code: int
-
-        :param database: database to query, defaults to None
-        :type database: str
-
-        :param raise_errors: Whether or not to raise exceptions when InfluxDB
-            returns errors, defaults to True
-        :type raise_errors: bool
-
-        :param chunked: Enable to use chunked responses from InfluxDB.
-            With ``chunked`` enabled, one ResultSet is returned per chunk
-            containing all results within that chunk
-        :type chunked: bool
-
-        :param chunk_size: Size of each chunk to tell InfluxDB to use.
-        :type chunk_size: int
-
-        :param method: the HTTP method for the request, defaults to GET
-        :type method: str
-
-        :returns: the queried data
-        :rtype: :class:`~.ResultSet`
         """
         if params is None:
             params = {}
@@ -561,38 +516,30 @@ class InfluxDBClient(object):
     ):
         """Write to multiple time series names.
 
-        :param points: the list of points to be written in the database
-        :type points: list of dictionaries, each dictionary represents a point
-        :type points: (if protocol is 'json') list of dicts, where each dict
-                                            represents a point.
-                    (if protocol is 'line') sequence of line protocol strings.
-        :param time_precision: Either 's', 'm', 'ms' or 'u', defaults to None
-        :type time_precision: str
-        :param database: the database to write the points to. Defaults to
-            the client's current database
-        :type database: str
-        :param tags: a set of key-value pairs associated with each point. Both
-            keys and values must be strings. These are shared tags and will be
-            merged with point-specific tags, defaults to None
-        :type tags: dict
-        :param retention_policy: the retention policy for the points. Defaults
-            to None
-        :type retention_policy: str
-        :param batch_size: value to write the points in batches
-            instead of all at one time. Useful for when doing data dumps from
-            one database to another or when doing a massive write operation,
-            defaults to None
-        :type batch_size: int
-        :param protocol: Protocol for writing data. Either 'line' or 'json'.
-        :type protocol: str
-        :param consistency: Consistency for the points.
-            One of {'any','one','quorum','all'}.
-        :type consistency: str
-        :returns: True, if the operation is successful
-        :rtype: bool
+        Args:
+            points: the list of points to be written in the database.
+                If protocol is 'json': list of dicts, where each dict represents a point.
+                If protocol is 'line': sequence of line protocol strings.
+            time_precision (str): Either 's', 'm', 'ms' or 'u', defaults to None
+            database (str): the database to write the points to. Defaults to
+                the client's current database
+            tags (dict): a set of key-value pairs associated with each point. Both
+                keys and values must be strings. These are shared tags and will be
+                merged with point-specific tags, defaults to None
+            retention_policy (str): the retention policy for the points. Defaults to None
+            batch_size (int): value to write the points in batches instead of all at
+                one time. Useful for data dumps or massive write operations, defaults to None
+            protocol (str): Protocol for writing data. Either 'line' or 'json'.
+            consistency (str): Consistency for the points.
+                One of {'any','one','quorum','all'}.
 
-        .. note:: if no retention policy is specified, the default retention
-            policy for the database is used
+        Returns:
+            bool: True, if the operation is successful
+
+        Note:
+            If no retention policy is specified, the default retention policy
+            for the database is used.
+
         """
         if batch_size and batch_size > 0:
             for batch in self._batches(points, batch_size):
@@ -620,7 +567,9 @@ class InfluxDBClient(object):
     def ping(self):
         """Check connectivity to InfluxDB.
 
-        :returns: The version of the InfluxDB the client is connected to
+        Returns:
+            str: the version of the InfluxDB the client is connected to
+
         """
         response = self.request(url="ping", method="GET", expected_response_code=204)
 
@@ -685,31 +634,28 @@ class InfluxDBClient(object):
     def get_list_database(self):
         """Get the list of databases in InfluxDB.
 
-        :returns: all databases in InfluxDB
-        :rtype: list of dictionaries
+        Returns:
+            list: all databases in InfluxDB (list of dicts)
 
-        :Example:
+        Example:
+            >>> dbs = client.get_list_database()
+            >>> dbs
+            [{'name': 'db1'}, {'name': 'db2'}, {'name': 'db3'}]
 
-        ::
-
-            >> dbs = client.get_list_database()
-            >> dbs
-            [{u'name': u'db1'}, {u'name': u'db2'}, {u'name': u'db3'}]
         """
         return list(self.query("SHOW DATABASES").get_points())
 
     def get_list_series(self, database=None, measurement=None, tags=None):
-        """Query SHOW SERIES returns the distinct series in your database.
+        """Query SHOW SERIES and return the distinct series in your database.
 
         FROM and WHERE clauses are optional.
 
-        :param measurement: Show all series from a measurement
-        :type id: string
-        :param tags: Show all series that match given tags
-        :type id: dict
-        :param database: the database from which the series should be
-            shows, defaults to client's current database
-        :type database: str
+        Args:
+            database (str): the database from which the series should be shown,
+                defaults to client's current database
+            measurement (str): show all series from a measurement
+            tags (dict): show all series that match given tags
+
         """
         database = database or self._database
         query_str = "SHOW SERIES"
@@ -727,42 +673,41 @@ class InfluxDBClient(object):
     def create_database(self, dbname):
         """Create a new database in InfluxDB.
 
-        :param dbname: the name of the database to create
-        :type dbname: str
+        Args:
+            dbname (str): the name of the database to create
+
         """
         self.query("CREATE DATABASE {0}".format(quote_ident(dbname)), method="POST")
 
     def drop_database(self, dbname):
         """Drop a database from InfluxDB.
 
-        :param dbname: the name of the database to drop
-        :type dbname: str
+        Args:
+            dbname (str): the name of the database to drop
+
         """
         self.query("DROP DATABASE {0}".format(quote_ident(dbname)), method="POST")
 
     def get_list_measurements(self):
         """Get the list of measurements in InfluxDB.
 
-        :returns: all measurements in InfluxDB
-        :rtype: list of dictionaries
+        Returns:
+            list: all measurements in InfluxDB (list of dicts)
 
-        :Example:
+        Example:
+            >>> measurements = client.get_list_measurements()
+            >>> measurements
+            [{'name': 'measurements1'}, {'name': 'measurements2'}, {'name': 'measurements3'}]
 
-        ::
-
-            >> dbs = client.get_list_measurements()
-            >> dbs
-            [{u'name': u'measurements1'},
-             {u'name': u'measurements2'},
-             {u'name': u'measurements3'}]
         """
         return list(self.query("SHOW MEASUREMENTS").get_points())
 
     def drop_measurement(self, measurement):
         """Drop a measurement from InfluxDB.
 
-        :param measurement: the name of the measurement to drop
-        :type measurement: str
+        Args:
+            measurement (str): the name of the measurement to drop
+
         """
         self.query("DROP MEASUREMENT {0}".format(quote_ident(measurement)), method="POST")
 
@@ -777,31 +722,27 @@ class InfluxDBClient(object):
     ):
         """Create a retention policy for a database.
 
-        :param name: the name of the new retention policy
-        :type name: str
-        :param duration: the duration of the new retention policy.
-            Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
-            and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
-            respectively. For infinite retention - meaning the data will
-            never be deleted - use 'INF' for duration.
-            The minimum retention period is 1 hour.
-        :type duration: str
-        :param replication: the replication of the retention policy
-        :type replication: str
-        :param database: the database for which the retention policy is
-            created. Defaults to current client's database
-        :type database: str
-        :param default: whether or not to set the policy as default
-        :type default: bool
-        :param shard_duration: the shard duration of the retention policy.
-            Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported and
-            mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
-            respectively. Infinite retention is not supported. As a workaround,
-            specify a "1000w" duration to achieve an extremely long shard group
-            duration. Defaults to "0s", which is interpreted by the database
-            to mean the default value given the duration.
-            The minimum shard group duration is 1 hour.
-        :type shard_duration: str
+        Args:
+            name (str): the name of the new retention policy
+            duration (str): the duration of the new retention policy.
+                Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
+                and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+                respectively. For infinite retention - meaning the data will
+                never be deleted - use 'INF' for duration.
+                The minimum retention period is 1 hour.
+            replication (str): the replication of the retention policy
+            database (str): the database for which the retention policy is
+                created. Defaults to current client's database
+            default (bool): whether or not to set the policy as default
+            shard_duration (str): the shard duration of the retention policy.
+                Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported and
+                mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+                respectively. Infinite retention is not supported. As a workaround,
+                specify a "1000w" duration to achieve an extremely long shard group
+                duration. Defaults to "0s", which is interpreted by the database
+                to mean the default value given the duration.
+                The minimum shard group duration is 1 hour.
+
         """
         query_string = "CREATE RETENTION POLICY {0} ON {1} DURATION {2} REPLICATION {3} SHARD DURATION {4}".format(
             quote_ident(name),
@@ -827,34 +768,30 @@ class InfluxDBClient(object):
     ):
         """Modify an existing retention policy for a database.
 
-        :param name: the name of the retention policy to modify
-        :type name: str
-        :param database: the database for which the retention policy is
-            modified. Defaults to current client's database
-        :type database: str
-        :param duration: the new duration of the existing retention policy.
-            Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
-            and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
-            respectively. For infinite retention, meaning the data will
-            never be deleted, use 'INF' for duration.
-            The minimum retention period is 1 hour.
-        :type duration: str
-        :param replication: the new replication of the existing
-            retention policy
-        :type replication: int
-        :param default: whether or not to set the modified policy as default
-        :type default: bool
-        :param shard_duration: the shard duration of the retention policy.
-            Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported and
-            mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
-            respectively. Infinite retention is not supported. As a workaround,
-            specify a "1000w" duration to achieve an extremely long shard group
-            duration.
-            The minimum shard group duration is 1 hour.
-        :type shard_duration: str
+        Args:
+            name (str): the name of the retention policy to modify
+            database (str): the database for which the retention policy is
+                modified. Defaults to current client's database
+            duration (str): the new duration of the existing retention policy.
+                Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
+                and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+                respectively. For infinite retention, meaning the data will
+                never be deleted, use 'INF' for duration.
+                The minimum retention period is 1 hour.
+            replication (int): the new replication of the existing retention policy
+            default (bool): whether or not to set the modified policy as default
+            shard_duration (str): the shard duration of the retention policy.
+                Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported and
+                mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+                respectively. Infinite retention is not supported. As a workaround,
+                specify a "1000w" duration to achieve an extremely long shard group
+                duration.
+                The minimum shard group duration is 1 hour.
 
-        .. note:: at least one of duration, replication, or default flag
+        Note:
+            At least one of duration, replication, or default flag
             should be set. Otherwise the operation will fail.
+
         """
         query_string = ("ALTER RETENTION POLICY {0} ON {1}").format(
             quote_ident(name), quote_ident(database or self._database)
@@ -873,11 +810,11 @@ class InfluxDBClient(object):
     def drop_retention_policy(self, name, database=None):
         """Drop an existing retention policy for a database.
 
-        :param name: the name of the retention policy to drop
-        :type name: str
-        :param database: the database for which the retention policy is
-            dropped. Defaults to current client's database
-        :type database: str
+        Args:
+            name (str): the name of the retention policy to drop
+            database (str): the database for which the retention policy is
+                dropped. Defaults to current client's database
+
         """
         query_string = ("DROP RETENTION POLICY {0} ON {1}").format(
             quote_ident(name), quote_ident(database or self._database)
@@ -887,22 +824,17 @@ class InfluxDBClient(object):
     def get_list_retention_policies(self, database=None):
         """Get the list of retention policies for a database.
 
-        :param database: the name of the database, defaults to the client's
-            current database
-        :type database: str
-        :returns: all retention policies for the database
-        :rtype: list of dictionaries
+        Args:
+            database (str): the name of the database, defaults to the client's current database
 
-        :Example:
+        Returns:
+            list: all retention policies for the database (list of dictionaries)
 
-        ::
+        Example:
+            >>> ret_policies = client.get_list_retention_policies('my_db')
+            >>> ret_policies
+            [{'default': True, 'duration': '0', 'name': 'default', 'replicaN': 1}]
 
-            >> ret_policies = client.get_list_retention_policies('my_db')
-            >> ret_policies
-            [{u'default': True,
-              u'duration': u'0',
-              u'name': u'default',
-              u'replicaN': 1}]
         """
         if not (database or self._database):
             raise InfluxDBClientError(
@@ -915,31 +847,25 @@ class InfluxDBClient(object):
     def get_list_users(self):
         """Get the list of all users in InfluxDB.
 
-        :returns: all users in InfluxDB
-        :rtype: list of dictionaries
+        Returns:
+            list: all users in InfluxDB (list of dictionaries)
 
-        :Example:
+        Example:
+            >>> users = client.get_list_users()
+            >>> users
+            [{'admin': True, 'user': 'user1'}, {'admin': False, 'user': 'user2'}, {'admin': False, 'user': 'user3'}]
 
-        ::
-
-            >> users = client.get_list_users()
-            >> users
-            [{u'admin': True, u'user': u'user1'},
-             {u'admin': False, u'user': u'user2'},
-             {u'admin': False, u'user': u'user3'}]
         """
         return list(self.query("SHOW USERS").get_points())
 
     def create_user(self, username, password, admin=False):
         """Create a new user in InfluxDB.
 
-        :param username: the new username to create
-        :type username: str
-        :param password: the password for the new user
-        :type password: str
-        :param admin: whether the user should have cluster administration
-            privileges or not
-        :type admin: boolean
+        Args:
+            username (str): the new username to create
+            password (str): the password for the new user
+            admin (bool): whether the user should have cluster administration privileges or not
+
         """
         text = "CREATE USER {0} WITH PASSWORD {1}".format(quote_ident(username), quote_literal(password))
         if admin:
@@ -949,8 +875,9 @@ class InfluxDBClient(object):
     def drop_user(self, username):
         """Drop a user from InfluxDB.
 
-        :param username: the username to drop
-        :type username: str
+        Args:
+            username (str): the username to drop
+
         """
         text = "DROP USER {0}".format(quote_ident(username))
         self.query(text, method="POST")
@@ -958,10 +885,10 @@ class InfluxDBClient(object):
     def set_user_password(self, username, password):
         """Change the password of an existing user.
 
-        :param username: the username who's password is being changed
-        :type username: str
-        :param password: the new password for the user
-        :type password: str
+        Args:
+            username (str): the username who's password is being changed
+            password (str): the new password for the user
+
         """
         text = "SET PASSWORD FOR {0} = {1}".format(quote_ident(username), quote_literal(password))
         self.query(text)
@@ -970,16 +897,14 @@ class InfluxDBClient(object):
         """Delete series from a database.
 
         Series must be filtered by either measurement and tags.
-        This method cannot be used to delete all series, use
-        `drop_database` instead.
+        This method cannot be used to delete all series, use drop_database instead.
 
-        :param database: the database from which the series should be
-            deleted, defaults to client's current database
-        :type database: str
-        :param measurement: Delete all series from a measurement
-        :type measurement: str
-        :param tags: Delete all series that match given tags
-        :type tags: dict
+        Args:
+            database (str): the database from which the series should be deleted,
+                defaults to client's current database
+            measurement (str): Delete all series from a measurement
+            tags (dict): Delete all series that match given tags
+
         """
         database = database or self._database
         query_str = "DROP SERIES"
@@ -994,11 +919,12 @@ class InfluxDBClient(object):
     def grant_admin_privileges(self, username):
         """Grant cluster administration privileges to a user.
 
-        :param username: the username to grant privileges to
-        :type username: str
+        Args:
+            username (str): the username to grant privileges to
 
-        .. note:: Only a cluster administrator can create/drop databases
-            and manage users.
+        Note:
+            Only a cluster administrator can create/drop databases and manage users.
+
         """
         text = "GRANT ALL PRIVILEGES TO {0}".format(quote_ident(username))
         self.query(text, method="POST")
@@ -1006,11 +932,12 @@ class InfluxDBClient(object):
     def revoke_admin_privileges(self, username):
         """Revoke cluster administration privileges from a user.
 
-        :param username: the username to revoke privileges from
-        :type username: str
+        Args:
+            username (str): the username to revoke privileges from
 
-        .. note:: Only a cluster administrator can create/ drop databases
-            and manage users.
+        Note:
+            Only a cluster administrator can create/drop databases and manage users.
+
         """
         text = "REVOKE ALL PRIVILEGES FROM {0}".format(quote_ident(username))
         self.query(text, method="POST")
@@ -1018,13 +945,12 @@ class InfluxDBClient(object):
     def grant_privilege(self, privilege, database, username):
         """Grant a privilege on a database to a user.
 
-        :param privilege: the privilege to grant, one of 'read', 'write'
-            or 'all'. The string is case-insensitive
-        :type privilege: str
-        :param database: the database to grant the privilege on
-        :type database: str
-        :param username: the username to grant the privilege to
-        :type username: str
+        Args:
+            privilege (str): the privilege to grant, one of 'read', 'write' or 'all'.
+                The string is case-insensitive
+            database (str): the database to grant the privilege on
+            username (str): the username to grant the privilege to
+
         """
         text = "GRANT {0} ON {1} TO {2}".format(privilege, quote_ident(database), quote_ident(username))
         self.query(text, method="POST")
@@ -1032,13 +958,12 @@ class InfluxDBClient(object):
     def revoke_privilege(self, privilege, database, username):
         """Revoke a privilege on a database from a user.
 
-        :param privilege: the privilege to revoke, one of 'read', 'write'
-            or 'all'. The string is case-insensitive
-        :type privilege: str
-        :param database: the database to revoke the privilege on
-        :type database: str
-        :param username: the username to revoke the privilege from
-        :type username: str
+        Args:
+            privilege (str): the privilege to revoke, one of 'read', 'write' or 'all'.
+                The string is case-insensitive
+            database (str): the database to revoke the privilege on
+            username (str): the username to revoke the privilege from
+
         """
         text = "REVOKE {0} ON {1} FROM {2}".format(privilege, quote_ident(database), quote_ident(username))
         self.query(text, method="POST")
@@ -1046,21 +971,17 @@ class InfluxDBClient(object):
     def get_list_privileges(self, username):
         """Get the list of all privileges granted to given user.
 
-        :param username: the username to get privileges of
-        :type username: str
+        Args:
+            username (str): the username to get privileges of
 
-        :returns: all privileges granted to given user
-        :rtype: list of dictionaries
+        Returns:
+            list: all privileges granted to given user (list of dictionaries)
 
-        :Example:
+        Example:
+            >>> privileges = client.get_list_privileges('user1')
+            >>> privileges
+            [{'privilege': 'WRITE', 'database': 'db1'}, {'privilege': 'ALL PRIVILEGES', 'database': 'db2'}, {'privilege': 'NO PRIVILEGES', 'database': 'db3'}]
 
-        ::
-
-            >> privileges = client.get_list_privileges('user1')
-            >> privileges
-            [{u'privilege': u'WRITE', u'database': u'db1'},
-             {u'privilege': u'ALL PRIVILEGES', u'database': u'db2'},
-             {u'privilege': u'NO PRIVILEGES', u'database': u'db3'}]
         """
         text = "SHOW GRANTS FOR {0}".format(quote_ident(username))
         return list(self.query(text).get_points())
@@ -1068,31 +989,14 @@ class InfluxDBClient(object):
     def get_list_continuous_queries(self):
         """Get the list of continuous queries in InfluxDB.
 
-        :return: all CQs in InfluxDB
-        :rtype: list of dictionaries
+        Returns:
+            list: all CQs in InfluxDB (list of dictionaries)
 
-        :Example:
+        Example:
+            >>> cqs = client.get_list_continuous_queries()
+            >>> cqs
+            [{'db1': []}, {'db2': [{'name': 'vampire', 'query': 'CREATE CONTINUOUS QUERY vampire ON mydb BEGIN SELECT count(dracula) INTO mydb.autogen.all_of_them FROM mydb.autogen.one GROUP BY time(5m) END'}]}]
 
-        ::
-
-            >> cqs = client.get_list_cqs()
-            >> cqs
-            [
-                {
-                    u'db1': []
-                },
-                {
-                    u'db2': [
-                        {
-                            u'name': u'vampire',
-                            u'query': u'CREATE CONTINUOUS QUERY vampire ON '
-                                       'mydb BEGIN SELECT count(dracula) INTO '
-                                       'mydb.autogen.all_of_them FROM '
-                                       'mydb.autogen.one GROUP BY time(5m) END'
-                        }
-                    ]
-                }
-            ]
         """
         query_string = "SHOW CONTINUOUS QUERIES"
         return [{sk[0]: list(p)} for sk, p in self.query(query_string).items()]
@@ -1100,41 +1004,19 @@ class InfluxDBClient(object):
     def create_continuous_query(self, name, select, database=None, resample_opts=None):
         r"""Create a continuous query for a database.
 
-        :param name: the name of continuous query to create
-        :type name: str
-        :param select: select statement for the continuous query
-        :type select: str
-        :param database: the database for which the continuous query is
-            created. Defaults to current client's database
-        :type database: str
-        :param resample_opts: resample options
-        :type resample_opts: str
+        Args:
+            name (str): the name of continuous query to create
+            select (str): select statement for the continuous query
+            database (str): the database for which the continuous query is
+                created. Defaults to current client's database
+            resample_opts (str): resample options
 
-        :Example:
+        Example:
+            >>> select_clause = 'SELECT mean("value") INTO "cpu_mean" FROM "cpu" GROUP BY time(1m)'
+            >>> client.create_continuous_query('cpu_mean', select_clause, 'db_name', 'EVERY 10s FOR 2m')
+            >>> client.get_list_continuous_queries()
+            [{'db_name': [{'name': 'cpu_mean', 'query': 'CREATE CONTINUOUS QUERY "cpu_mean" ON "db_name" RESAMPLE EVERY 10s FOR 2m BEGIN SELECT mean("value") INTO "cpu_mean" FROM "cpu" GROUP BY time(1m) END'}]}]
 
-        ::
-
-            >> select_clause = 'SELECT mean("value") INTO "cpu_mean" ' \
-            ...                 'FROM "cpu" GROUP BY time(1m)'
-            >> client.create_continuous_query(
-            ...     'cpu_mean', select_clause, 'db_name', 'EVERY 10s FOR 2m'
-            ... )
-            >> client.get_list_continuous_queries()
-            [
-                {
-                    'db_name': [
-                        {
-                            'name': 'cpu_mean',
-                            'query': 'CREATE CONTINUOUS QUERY "cpu_mean" '
-                                    'ON "db_name" '
-                                    'RESAMPLE EVERY 10s FOR 2m '
-                                    'BEGIN SELECT mean("value") '
-                                    'INTO "cpu_mean" FROM "cpu" '
-                                    'GROUP BY time(1m) END'
-                        }
-                    ]
-                }
-            ]
         """
         query_string = ("CREATE CONTINUOUS QUERY {0} ON {1}{2} BEGIN {3} END").format(
             quote_ident(name),
@@ -1147,11 +1029,11 @@ class InfluxDBClient(object):
     def drop_continuous_query(self, name, database=None):
         """Drop an existing continuous query for a database.
 
-        :param name: the name of continuous query to drop
-        :type name: str
-        :param database: the database for which the continuous query is
-            dropped. Defaults to current client's database
-        :type database: str
+        Args:
+            name (str): the name of continuous query to drop
+            database (str): the database for which the continuous query is
+                dropped. Defaults to current client's database
+
         """
         query_string = ("DROP CONTINUOUS QUERY {0} ON {1}").format(
             quote_ident(name), quote_ident(database or self._database)
@@ -1161,13 +1043,13 @@ class InfluxDBClient(object):
     def send_packet(self, packet, protocol="json", time_precision=None):
         """Send a UDP packet.
 
-        :param packet: the packet to be sent
-        :type packet: (if protocol is 'json') dict
-                      (if protocol is 'line') list of line protocol strings
-        :param protocol: protocol of input data, either 'json' or 'line'
-        :type protocol: str
-        :param time_precision: Either 's', 'm', 'ms' or 'u', defaults to None
-        :type time_precision: str
+        Args:
+            packet (dict or list): the packet to be sent
+                - if protocol is 'json': dict
+                - if protocol is 'line': list of line protocol strings
+            protocol (str): protocol of input data, either 'json' or 'line'
+            time_precision (str): Either 's', 'm', 'ms' or 'u', defaults to None
+
         """
         if protocol == "json":
             data = make_lines(packet, time_precision).encode("utf-8")
@@ -1176,7 +1058,7 @@ class InfluxDBClient(object):
         self.udp_socket.sendto(data, (self._host, self._udp_port))
 
     def close(self):
-        """Close http session."""
+        """Close HTTP session."""
         if isinstance(self._session, urllib3.PoolManager):
             self._session.clear()
 
@@ -1186,6 +1068,7 @@ def _parse_dsn(dsn):
 
     This is a helper function to split the data source name provided in
     the from_dsn classmethod
+
     """
     conn_params = urlparse(dsn)
     init_args = {}

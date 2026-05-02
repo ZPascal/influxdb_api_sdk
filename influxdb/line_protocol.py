@@ -69,12 +69,28 @@ def _escape_tag_value(value):
 
 
 def quote_ident(value):
-    """Indent the quotes."""
+    """Indent the quotes.
+
+    Args:
+        value (str): the value to quote
+
+    Returns:
+        str: the quoted identifier
+
+    """
     return '"{}"'.format(value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n"))
 
 
 def quote_literal(value):
-    """Quote provided literal."""
+    """Quote provided literal.
+
+    Args:
+        value (str): the value to quote
+
+    Returns:
+        str: the quoted literal
+
+    """
     return "'{}'".format(value.replace("\\", "\\\\").replace("'", "\\'"))
 
 
@@ -108,7 +124,16 @@ def _escape_value(value):
 
 
 def _get_unicode(data, force=False):
-    """Try to return a text aka unicode object from the given data."""
+    """Try to return a text aka unicode object from the given data.
+
+    Args:
+        data: the data to convert to unicode
+        force (bool): whether to force conversion to string
+
+    Returns:
+        str: the unicode representation of the data
+
+    """
     if isinstance(data, bytes):
         return data.decode("utf-8")
 
@@ -122,7 +147,19 @@ def _get_unicode(data, force=False):
 
 
 def make_line(measurement, tags=None, fields=None, time=None, precision=None):
-    """Extract the actual point from a given measurement line."""
+    """Extract the actual point from a given measurement line.
+
+    Args:
+        measurement (str): the measurement name
+        tags (dict): dictionary of tag key-value pairs
+        fields (dict): dictionary of field key-value pairs
+        time: the timestamp for the point
+        precision (str): time precision (n, u, ms, s, m, h)
+
+    Returns:
+        str: the line protocol representation of the point
+
+    """
     tags = tags or {}
     fields = fields or {}
 
@@ -163,6 +200,14 @@ def make_lines(data, precision=None):
 
     Extracts the points from the given dict and returns a Unicode string
     matching the line protocol introduced in InfluxDB 0.9.0.
+
+    Args:
+        data (dict): dictionary containing 'points' key with list of point objects
+        precision (str): time precision (n, u, ms, s, m, h)
+
+    Returns:
+        str: line protocol formatted string
+
     """
     lines = []
     static_tags = data.get("tags")

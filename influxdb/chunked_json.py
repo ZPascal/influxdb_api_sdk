@@ -15,7 +15,18 @@ import json
 
 
 def loads(s):
-    """Generate a sequence of JSON values from a string."""
+    """Generate a sequence of JSON values from a string.
+
+    Args:
+        s (str): JSON string to parse
+
+    Yields:
+        dict: JSON objects parsed from the string
+
+    Raises:
+        ValueError: if no JSON object is found
+
+    """
     _decoder = json.JSONDecoder()
 
     while s:

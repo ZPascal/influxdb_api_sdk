@@ -53,8 +53,10 @@ class SeriesHelper(object):
     def __new__(cls, *args, **kwargs):  # noqa: C901
         """Initialize class attributes for subsequent constructor calls.
 
-        :note: *args and **kwargs are not explicitly used in this function,
-        but needed for Python 2 compatibility.
+        Note:
+            *args and **kwargs are not explicitly used in this function,
+            but needed for Python 2 compatibility.
+
         """
         if not cls.__initialized__:
             cls.__initialized__ = True
@@ -112,8 +114,12 @@ class SeriesHelper(object):
     def __init__(self, **kw):
         """Call to constructor creates a new data point.
 
-        :note: Data points written when `bulk_size` is reached per Helper.
-        :warning: Data points are *immutable* (`namedtuples`).
+        Note:
+            Data points written when bulk_size is reached per Helper.
+
+        Warning:
+            Data points are immutable (namedtuples).
+
         """
         cls = self.__class__
         timestamp = kw.pop("time", self._current_timestamp())
@@ -136,9 +142,13 @@ class SeriesHelper(object):
     def commit(cls, client=None):
         """Commit everything from datapoints via the client.
 
-        :param client: InfluxDBClient instance for writing points to InfluxDB.
-        :attention: any provided client will supersede the class client.
-        :return: result of client.write_points.
+        Args:
+            client (InfluxDBClient): InfluxDBClient instance for writing points to InfluxDB.
+                Any provided client will supersede the class client.
+
+        Returns:
+            bool: result of client.write_points.
+
         """
         if not client:
             client = cls._client
@@ -156,7 +166,9 @@ class SeriesHelper(object):
     def _json_body_(cls):
         """Return the JSON body of given datapoints.
 
-        :return: JSON body of these datapoints.
+        Returns:
+            list: JSON body of these datapoints.
+
         """
         json = []
         if not cls.__initialized__:
