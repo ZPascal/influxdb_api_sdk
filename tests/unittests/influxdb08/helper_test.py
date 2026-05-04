@@ -238,3 +238,96 @@ class TestSeriesHelper(TestCase):
             [w.message.args[0] for w in rec_warnings],
             "Warning message did not contain the expected_msg.",
         )
+
+
+
+class TestInfluxdb08HelperCoverage(TestCase):
+    def test_bulk_size_warn_forced(self):
+        """Cover lines 74-75: bulk_size < 1 forced to 1."""
+        from influxdb.influxdb08.helper import SeriesHelper
+        from influxdb.influxdb08 import InfluxDBClient as C08
+
+        class BulkZeroHelper(SeriesHelper):
+            class Meta:
+                series_name = "test.{server}"
+                fields = ["server", "value"]
+                bulk_size = 0
+                client = C08()
+                autocommit = True
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                BulkZeroHelper(server="s1", value=1)
+            except Exception:
+                pass
+        warning_messages = [str(x.message) for x in w if issubclass(x.category, UserWarning)]
+        self.assertTrue(any("forced to 1" in msg for msg in warning_messages))
+
+    def test_no_fields_match_raises(self):
+        """Cover line 99: field mismatch raises NameError."""
+        from influxdb.influxdb08.helper import SeriesHelper
+
+        class SimpleHelper(SeriesHelper):
+            class Meta:
+                series_name = "test.{server}"
+                fields = ["server", "value"]
+                autocommit = False
+
+        with self.assertRaises(NameError):
+            SimpleHelper(server="s1")  # missing 'value'
+
+    def test_commit_with_client(self):
+        """Cover line 114->116: commit passes explicit client."""
+        from influxdb.influxdb08.helper import SeriesHelper
+
+        class CommitHelper(SeriesHelper):
+            class Meta:
+                series_name = "test.{server}"
+                fields = ["server", "value"]
+                autocommit = False
+
+        CommitHelper(server="s1", value=10)
+        mock_client = MagicMock()
+        mock_client.write_points.return_value = True
+        result = CommitHelper.commit(client=mock_client)
+        self.assertTrue(result)
+        CommitHelper._reset_()
+
+    def test_bulk_size_no_autocommit_warns(self):
+        """Cover line 128: bulk_size with autocommit=False warns."""
+        from influxdb.influxdb08.helper import SeriesHelper
+
+        class NoBulkHelper(SeriesHelper):
+            class Meta:
+                series_name = "data.{srv}"
+                fields = ["srv", "val"]
+                bulk_size = 5
+                autocommit = False
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            NoBulkHelper(srv="x", val=1)
+        user_warnings = [str(x.message) for x in w if issubclass(x.category, UserWarning)]
+        self.assertTrue(any("has no affect" in msg for msg in user_warnings))
+        NoBulkHelper._reset_()
+
+
+class TestInfluxdb08HelperJsonBodyUninitialized(TestCase):
+    """Test influxdb08/helper.py line 128 (uninitialized _json_body_)."""
+
+    def test_json_body_uninitialized(self):
+        """Cover line 128: _json_body_ calls _reset_() when not initialized."""
+        from influxdb.influxdb08.helper import SeriesHelper
+
+        class UniqueHelper08(SeriesHelper):
+            class Meta:
+                series_name = "unique_08.{host}"
+                fields = ["val"]
+                autocommit = False
+
+        # Initialize to set up the class
+        UniqueHelper08.__initialized__ = False
+        result = UniqueHelper08._json_body_()
+        self.assertEqual(result, [])
+

@@ -443,7 +443,12 @@ class DataFrameClient(InfluxDBClient):
 
         # Find int and string columns for field-type data
         int_columns = dframe.select_dtypes(include=["integer"]).columns
-        string_columns = dframe.select_dtypes(include=["object"]).columns
+        # For pandas 3+ compatibility: explicitly include 'string' dtype to avoid deprecation warning
+        try:
+            string_columns = dframe.select_dtypes(include=["object", "string"]).columns
+        except (TypeError, AttributeError):  # pragma: no cover
+            # Older pandas versions don't have 'string' dtype
+            string_columns = dframe.select_dtypes(include=["object"]).columns
 
         # Convert dframe to string
         if numeric_precision is None:

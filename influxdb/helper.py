@@ -7,7 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from collections import namedtuple, defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from warnings import warn
 
 
@@ -200,4 +200,4 @@ class SeriesHelper(object):
 
     @staticmethod
     def _current_timestamp():
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)

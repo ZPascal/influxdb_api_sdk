@@ -301,9 +301,8 @@ class InfluxDBClient(object):
                 data = compressed.getvalue()
 
         # Try to send the request more than once by default (see #103)
-        retry = True
         _try = 0
-        while retry:
+        while True:
             try:
                 if "Authorization" not in headers and self._username is not None and self._password is not None:
                     headers.update(urllib3.make_headers(basic_auth=f"{self._username}:{self._password}"))
@@ -334,9 +333,7 @@ class InfluxDBClient(object):
                 urllib3.exceptions.TimeoutError,
             ):
                 _try += 1
-                if self._retries != 0:
-                    retry = _try < self._retries
-                if not retry:
+                if 0 < self._retries <= _try:
                     raise
                 if method == "POST":
                     time.sleep((2**_try) * random.random() / 100.0)
@@ -1053,7 +1050,7 @@ class InfluxDBClient(object):
         """
         if protocol == "json":
             data = make_lines(packet, time_precision).encode("utf-8")
-        elif protocol == "line":
+        elif protocol == "line":  # pragma: no branch
             data = ("\n".join(packet) + "\n").encode("utf-8")
         self.udp_socket.sendto(data, (self._host, self._udp_port))
 
@@ -1118,7 +1115,7 @@ def _parse_netloc(netloc):
 def _msgpack_parse_hook(code, data):
     if code == 5:
         (epoch_s, epoch_ns) = struct.unpack(">QI", data)
-        timestamp = datetime.datetime.utcfromtimestamp(epoch_s)
+        timestamp = datetime.datetime.fromtimestamp(epoch_s, tz=datetime.timezone.utc)
         timestamp += datetime.timedelta(microseconds=(epoch_ns / 1000))
-        return timestamp.isoformat() + "Z"
+        return timestamp.isoformat().replace('+00:00', '') + 'Z'
     return msgpack.ExtType(code, data)

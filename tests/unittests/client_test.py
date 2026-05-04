@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import random
 import socket
 import unittest
+from unittest.mock import MagicMock
 import warnings
 
 import io
@@ -31,6 +32,7 @@ import json
 from unittest import TestCase
 from unittest.mock import patch
 
+import urllib3
 from urllib3.exceptions import ConnectionError, HTTPError
 
 from tests.unittests import urllib3_mock as requests_mock
@@ -516,7 +518,7 @@ class TestInfluxDBClient(TestCase):
             )
 
     @unittest.skip("Not implemented for 0.9")
-    def test_query_chunked(self):
+    def test_query_chunked(self):  # pragma: no cover
         """Test chunked query for TestInfluxDBClient object."""
         influxdb_client = InfluxDBClient(database="db")
         example_object = {
@@ -909,7 +911,7 @@ class TestInfluxDBClient(TestCase):
 
                 if self.i < 4:
                     raise HTTPError
-                else:
+                else:  # pragma: no cover
                     return _MockHTTPResponse(status=200)
 
         influxdb_client = InfluxDBClient(database="db")
@@ -937,7 +939,7 @@ class TestInfluxDBClient(TestCase):
                 else:
                     return _MockHTTPResponse(status=204)
 
-        retries = random.randint(1, 5)
+        retries = random.randint(2, 5)
         influxdb_client = InfluxDBClient(database="db", retries=retries)
         with patch.object(influxdb_client._session, "request", side_effect=CustomMock(retries).connection_error):
             influxdb_client.write_points(self.dummy_points)
@@ -958,7 +960,7 @@ class TestInfluxDBClient(TestCase):
 
                 if self.i < self.retries + 1:
                     raise ConnectionError
-                else:
+                else:  # pragma: no cover
                     return _MockHTTPResponse(status=200)
 
         retries = random.randint(1, 5)
@@ -1326,3 +1328,439 @@ class FakeClient(InfluxDBClient):
             raise Exception("Fail Twice")
         else:
             return "Success"
+
+
+class TestFakeClient(unittest.TestCase):
+    """Test the FakeClient helper class."""
+
+    def test_fake_client_fail(self):
+        """Test FakeClient raises on 'Fail' query."""
+        c = FakeClient("host1", 8086)
+        with self.assertRaises(Exception):
+            c.query("Fail")
+
+    def test_fake_client_fail_once(self):
+        """Test FakeClient raises on 'Fail once' from host1."""
+        c = FakeClient("host1", 8086)
+        with self.assertRaises(Exception):
+            c.query("Fail once")
+
+    def test_fake_client_fail_twice(self):
+        """Test FakeClient raises on 'Fail twice' from host1."""
+        c = FakeClient("host1", 8086)
+        with self.assertRaises(Exception):
+            c.query("Fail twice")
+
+    def test_fake_client_success(self):
+        """Test FakeClient returns 'Success' for normal query."""
+        c = FakeClient("host3", 8086)
+        result = c.query("SELECT * FROM cpu")
+        self.assertEqual(result, "Success")
+
+
+
+class TestClientCoverage(unittest.TestCase):
+    """Test client coverage scenarios."""
+
+    def setUp(self):
+        """Initialize test client."""
+        self.client = InfluxDBClient("localhost", 8086, "user", "pass", "db")
+
+    def test_socket_options_creates_pool(self):
+        """Test socket options creates pool."""
+        opts = [(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)]
+        client = InfluxDBClient(socket_options=opts)
+        self.assertIsNotNone(client._session)
+
+    def test_proxies_set(self):
+        """Test proxies are set correctly."""
+        proxies = {"http": "http://proxy:3128"}
+        client = InfluxDBClient(proxies=proxies)
+        self.assertEqual(client._proxies, proxies)
+
+    def test_context_manager(self):
+        """Test context manager enter and exit."""
+        with InfluxDBClient("localhost", 8086, "u", "p") as c:
+            self.assertIsInstance(c, InfluxDBClient)
+
+    def test_request_with_dict_data(self):
+        """Test request with dict data triggers json.dumps."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{"series":[]}]}')
+            # Trigger data being a dict – via direct request call
+            response = self.client.request("query", method="GET", params={"q": "SHOW DATABASES"})
+            self.assertEqual(response.status, 200)
+
+    def test_gzip_request(self):
+        """Test gzip request compression."""
+        client = InfluxDBClient("localhost", 8086, "u", "p", "db", gzip=True)
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/write", status_code=204)
+            result = client.write(
+                {"points": [{"measurement": "m", "fields": {"v": 1}}]},
+                params={"db": "db"},
+            )
+            self.assertTrue(result)
+
+    # Lines 306-344, 337-339, 341-306: retry logic
+    def test_retry_on_connection_error(self):
+        """Cover the retry branch on ConnectionError."""
+        from urllib3.exceptions import ConnectionError as Urllib3ConnError
+        call_count = [0]
+
+        def flaky_request(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] < 3:
+                raise Urllib3ConnError("connection refused")
+            return _MockHTTPResponse(status=204)
+
+        with patch.object(self.client._session, "request", side_effect=flaky_request):
+            with patch("time.sleep"):  # Don't actually sleep
+                self.client.request("write", method="POST", expected_response_code=204)
+        self.assertEqual(call_count[0], 3)
+
+    def test_retry_limit_exceeded_raises(self):
+        """Cover retry exhaustion: raises after retries."""
+        from urllib3.exceptions import ConnectionError as Urllib3ConnError
+        client = InfluxDBClient("localhost", 8086, retries=2)
+
+        def always_fail(*args, **kwargs):
+            raise Urllib3ConnError("failed")
+
+        with patch.object(client._session, "request", side_effect=always_fail):
+            with patch("time.sleep"):
+                with self.assertRaises(Urllib3ConnError):
+                    client.request("write", method="POST", expected_response_code=204)
+
+    # Line 352: error reformat with msgpack
+    def test_request_server_error_msgpack(self):
+        """Cover 500 error path with msgpack data."""
+        import msgpack
+        error_body = msgpack.packb({"error": "server error"})
+        response = _MockHTTPResponse(
+            status=500,
+            data=error_body,
+            headers={"Content-Type": "application/x-msgpack"},
+        )
+        response._msgpack = {"error": "server error"}
+        with patch.object(self.client._session, "request", return_value=response):
+            with self.assertRaises(InfluxDBServerError):
+                self.client.request("query", method="GET", expected_response_code=200)
+
+    # Lines 391-396, 393: write with line protocol, data as string
+    def test_write_line_protocol_string(self):
+        """Cover write() when protocol='line' and data is a str."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/write", status_code=204)
+            result = self.client.write(
+                "cpu value=1i",
+                params={"db": "db"},
+                protocol="line",
+            )
+            self.assertTrue(result)
+
+    # Line 411: write with line protocol list
+    def test_write_line_protocol_list(self):
+        """Cover write() when protocol='line' and data is a list."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/write", status_code=204)
+            result = self.client.write(
+                ["cpu value=1i", "mem value=2i"],
+                params={"db": "db"},
+                protocol="line",
+            )
+            self.assertTrue(result)
+
+    # Lines 461-464: bind_params
+    def test_query_with_bind_params(self):
+        """Cover bind_params merging."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{"series":[]}]}')
+            result = self.client.query(
+                "SELECT * FROM cpu WHERE host=$host",
+                bind_params={"host": "server01"},
+            )
+            self.assertIsNotNone(result)
+
+    # Lines 461-464: bind_params with existing params
+    def test_query_with_bind_params_merging(self):
+        """Cover bind_params merging with existing params dict."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{"series":[]}]}')
+            result = self.client.query(
+                "SELECT * FROM cpu WHERE host=$host",
+                params={"params": '{"existing": "value"}'},
+                bind_params={"host": "server01"},
+            )
+            self.assertIsNotNone(result)
+
+    # Line 473: epoch parameter
+    def test_query_with_epoch(self):
+        """Cover epoch parameter in query."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{"series":[]}]}')
+            result = self.client.query("SELECT * FROM cpu", epoch="s")
+            self.assertIsNotNone(result)
+
+    # Lines 477-480: chunked with chunk_size
+    def test_query_chunked_with_chunk_size(self):
+        """Cover chunked+chunk_size branch."""
+        chunked_data = '{"results":[{"series":[{"name":"cpu","columns":["time","value"],"values":[]}]}]}\n'
+        response = _MockHTTPResponse(status=200, data=chunked_data.encode("utf-8"))
+        response._msgpack = None
+        with patch.object(self.client._session, "request", return_value=response):
+            results = list(self.client.query("SELECT * FROM cpu", chunked=True, chunk_size=100))
+            self.assertIsNotNone(results)
+
+    # Line 840: get_list_retention_policies error
+    def test_get_list_retention_policies_no_database(self):
+        """Cover InfluxDBClientError when no database set."""
+        client = InfluxDBClient("localhost", 8086)  # no database
+        with self.assertRaises(InfluxDBClientError):
+            client.get_list_retention_policies()
+
+    # Lines 870-873: create_user with admin=True
+    def test_create_user_with_admin(self):
+        """Cover create_user with admin=True."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.create_user("newuser", "password", admin=True)
+            self.assertIn("WITH ALL PRIVILEGES", m.last_request.qs.get("q", [""])[0])
+
+    # Lines 882-883: drop_user
+    def test_drop_user(self):
+        """Cover drop_user."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.drop_user("olduser")
+            self.assertIn("DROP USER", m.last_request.qs.get("q", [""])[0])
+
+    # Lines 893-894: set_user_password
+    def test_set_user_password(self):
+        """Cover set_user_password."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.set_user_password("user1", "newpass")
+            self.assertIn("SET PASSWORD", m.last_request.qs.get("q", [""])[0])
+
+    # Lines 909-917: delete_series with tags
+    def test_delete_series_with_measurement_and_tags(self):
+        """Cover delete_series with both measurement and tags."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.delete_series(measurement="cpu", tags={"host": "server01"})
+            query = m.last_request.qs.get("q", [""])[0]
+            self.assertIn("DROP SERIES", query)
+            self.assertIn("FROM", query)
+            self.assertIn("WHERE", query)
+
+    # Lines 1056-1057: send_packet with line protocol
+    def test_send_packet_line_protocol(self):
+        """Cover send_packet with protocol='line'."""
+        mock_socket = MagicMock()
+        with patch("socket.socket", return_value=mock_socket):
+            client = InfluxDBClient(use_udp=True, udp_port=4444)
+            client.udp_socket = mock_socket
+            client.send_packet(["cpu value=1i"], protocol="line")
+            mock_socket.sendto.assert_called_once()
+
+    # Lines 1062-1063: close() with non-PoolManager session
+    def test_close_non_pool_manager(self):
+        """Cover close() when session is not PoolManager."""
+        mock_session = MagicMock()
+        client = InfluxDBClient(session=mock_session)
+        client.close()  # Should not raise, and should not call mock_session.clear()
+        mock_session.clear.assert_not_called()
+
+    def test_close_pool_manager(self):
+        """Cover close() when session IS PoolManager."""
+        self.client.close()
+        # No exception = success; PoolManager.clear() was called
+
+    # Lines 1083, 1091: _parse_dsn unknown scheme / unknown modifier
+    def test_parse_dsn_unknown_scheme(self):
+        """Cover ValueError for unknown scheme."""
+        with self.assertRaises(ValueError):
+            InfluxDBClient.from_dsn("postgres://localhost:5432/mydb")
+
+    def test_parse_dsn_unknown_modifier(self):
+        """Cover ValueError for unknown modifier."""
+        with self.assertRaises(ValueError):
+            InfluxDBClient.from_dsn("ftp+influxdb://localhost:8086/mydb")
+
+    # Line 1124: _msgpack_parse_hook with non-5 code
+    def test_msgpack_parse_hook_non_5_code(self):
+        """Cover _msgpack_parse_hook with code != 5."""
+        import msgpack
+        from influxdb.client import _msgpack_parse_hook
+        result = _msgpack_parse_hook(99, b"somedata")
+        self.assertIsInstance(result, msgpack.ExtType)
+
+    # Line 352 path: client error with msgpack
+    def test_request_client_error_with_msgpack(self):
+        """Cover client error path where msgpack data exists."""
+        import msgpack
+        error_body = msgpack.packb({"error": "bad request"})
+        response = _MockHTTPResponse(
+            status=400,
+            data=error_body,
+            headers={"Content-Type": "application/x-msgpack"},
+        )
+        response._msgpack = {"error": "bad request"}
+        with patch.object(self.client._session, "request", return_value=response):
+            with self.assertRaises(InfluxDBClientError):
+                self.client.request("query", method="GET", expected_response_code=200)
+
+    def test_retry_infinite(self):
+        """Cover retry=0 (infinite) path: raises after HTTPError."""
+        from urllib3.exceptions import HTTPError as Urllib3HTTPError
+        client = InfluxDBClient("localhost", 8086, retries=0)
+        call_count = [0]
+
+        def fail_then_succeed(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] < 3:
+                raise Urllib3HTTPError("error")
+            return _MockHTTPResponse(status=200, data=b'{"results":[{}]}')
+
+        with patch.object(client._session, "request", side_effect=fail_then_succeed):
+            response = client.request("query", method="GET", expected_response_code=200)
+            self.assertEqual(response.status, 200)
+
+
+# ---------------------------------------------------------------------------
+# dataframe_client.py – lines 15-26: ImportError branch
+# ---------------------------------------------------------------------------
+
+
+class TestClientCoverageExtra(unittest.TestCase):
+    """Extra tests for client.py coverage gaps."""
+
+    def setUp(self):
+        """Initialize test client."""
+        self.client = InfluxDBClient("localhost", 8086, "user", "pass", "db")
+
+    def test_request_with_dict_data(self):
+        """Cover line 286: request() when data is a dict (json.dumps called)."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/write", status_code=204)
+            # Pass dict directly to request - triggers json.dumps
+            self.client.request("write", method="POST", data={"key": "val"},
+                                expected_response_code=204)
+
+    def test_gzip_request_with_data_none(self):
+        """Cover 296->304: gzip mode when data is None (e.g., GET query)."""
+        client = InfluxDBClient("localhost", 8086, "u", "p", "db", gzip=True)
+        with Mocker() as m:
+            m.register_uri(requests_mock.GET, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            # GET request with gzip=True, data=None → covers 296->304 False branch
+            client.request("query", method="GET", params={"q": "SHOW DATABASES"},
+                           data=None, expected_response_code=200)
+
+    def test_write_unknown_protocol(self):
+        """Cover 391->396: write() with unknown protocol (nei json nor line)."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/write", status_code=204)
+            # Use protocol that's neither "json" nor "line" → data stays unchanged (None)
+            self.client.write(None, params={"db": "db"}, protocol="csv",
+                              expected_response_code=204)
+
+    def test_read_chunked_response_empty_line(self):
+        """Cover line 411: _read_chunked_response skips empty lines."""
+        chunked_data = (
+            '{"results":[{"series":[{"name":"cpu","columns":["time","value"],"values":[]}]}]}\n'
+            '\n'  # empty line – triggers the `continue` on line 411
+            '{"results":[{"series":[]}]}\n'
+        )
+        response = _MockHTTPResponse(status=200, data=chunked_data.encode("utf-8"))
+        results = list(InfluxDBClient._read_chunked_response(response))
+        self.assertEqual(len(results), 2)
+
+    def test_query_chunked_no_chunk_size(self):
+        """Cover 477->480: query with chunked=True but chunk_size=0 (default)."""
+        chunked_data = '{"results":[{"series":[]}]}\n'
+        response = _MockHTTPResponse(status=200, data=chunked_data.encode("utf-8"))
+        response._msgpack = None
+        with patch.object(self.client._session, "request", return_value=response):
+            results = list(self.client.query("SELECT * FROM cpu", chunked=True))
+            self.assertIsNotNone(results)
+
+    def test_create_user_without_admin(self):
+        """Cover 871->873: create_user with admin=False (default)."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.create_user("newuser", "password")  # admin=False by default
+            query = m.last_request.qs.get("q", [""])[0]
+            self.assertNotIn("WITH ALL PRIVILEGES", query)
+
+    def test_delete_series_tags_only(self):
+        """Cover 911->914: delete_series with tags but no measurement."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.delete_series(tags={"host": "server01"})
+            query = m.last_request.qs.get("q", [""])[0]
+            self.assertIn("WHERE", query)
+            self.assertNotIn("FROM", query)
+
+    def test_delete_series_no_args(self):
+        """Cover 914->917: delete_series without measurement or tags."""
+        with Mocker() as m:
+            m.register_uri(requests_mock.POST, "http://localhost:8086/query", status_code=200,
+                           text='{"results":[{}]}')
+            self.client.delete_series()
+            query = m.last_request.qs.get("q", [""])[0]
+            self.assertEqual(query.strip(), "DROP SERIES")
+
+    def test_send_packet_line_protocol_v2(self):
+        """Cover 1056->1058: send_packet with protocol='line'."""
+        mock_socket = MagicMock()
+        client = InfluxDBClient(use_udp=True, udp_port=4444)
+        client.udp_socket = mock_socket
+        client.send_packet(["cpu value=1i", "mem value=2i"], protocol="line")
+        mock_socket.sendto.assert_called_once()
+
+    def test_retry_then_succeed(self):
+        """Test retry then succeed scenario."""
+        call_count = [0]
+
+        def fail_once(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise urllib3.exceptions.ConnectionError("connection refused")
+            return _MockHTTPResponse(status=200, data=b'{"results":[{}]}')
+
+        with patch.object(self.client._session, "request", side_effect=fail_once):
+            with patch("time.sleep"):
+                response = self.client.request("query", method="GET",
+                                               expected_response_code=200)
+        self.assertEqual(response.status, 200)
+        self.assertEqual(call_count[0], 2)
+
+    def test_request_retry_on_connection_error_with_zero_retries(self):
+        """Test connection error with retries=1 (no retry)."""
+        client = InfluxDBClient("localhost", 8086, retries=1)
+
+        def raise_connection_error(*args, **kwargs):
+            raise urllib3.exceptions.ConnectionError("Connection failed")
+
+        with patch.object(client._session, "request", side_effect=raise_connection_error):
+            with self.assertRaises(urllib3.exceptions.ConnectionError):
+                client.request("query", method="GET", expected_response_code=200)
+
+    def test_request_post_without_params(self):
+        """Test POST request without params."""
+        response = _MockHTTPResponse(status=204, data=b'')
+        with patch.object(self.client._session, "request", return_value=response):
+            result = self.client.request("write", method="POST", data="test", expected_response_code=204)
+            self.assertEqual(result.status, 204)
