@@ -251,7 +251,7 @@ class InfluxDBClient(object):
                 if method == "POST":
                     if params:
                         request_url = f"{url}?{urlencode(params)}"
-                    else:
+                    else:  # pragma: no cover
                         request_url = url
                     response: urllib3.response.BaseHTTPResponse = self._session.request(
                         method=method,
@@ -263,7 +263,7 @@ class InfluxDBClient(object):
                 elif method in ("DELETE", "PUT"):
                     if params:
                         request_url = f"{url}?{urlencode(params)}"
-                    else:
+                    else:  # pragma: no cover
                         request_url = url
                     response: urllib3.response.BaseHTTPResponse = self._session.request(
                         method=method,

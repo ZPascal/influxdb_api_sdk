@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import unittest
+from unittest.mock import patch
 
 from influxdb import chunked_json
 
@@ -59,3 +60,26 @@ class TestChunkJson(unittest.TestCase):
             ],
             res,
         )
+
+
+
+class TestChunkedJsonLoads(unittest.TestCase):
+    """Test chunked JSON loads functionality."""
+
+    def test_loads_value_error_at_zero_pos(self):
+        """Cover the ValueError branch when raw_decode returns pos == 0."""
+        import influxdb.chunked_json as cj
+
+        class _FakeDecoder:
+            def raw_decode(self, s):
+                return ({}, 0)
+
+        with patch.object(cj, "json") as mock_json:
+            mock_json.JSONDecoder.return_value = _FakeDecoder()
+            with self.assertRaises(ValueError):
+                list(cj.loads('{"a":1}'))
+
+
+# ---------------------------------------------------------------------------
+# resultset.py – missing branches
+# ---------------------------------------------------------------------------

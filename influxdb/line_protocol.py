@@ -12,7 +12,7 @@ from numbers import Integral
 from pytz import UTC
 from dateutil.parser import parse
 
-EPOCH = UTC.localize(datetime.utcfromtimestamp(0))
+EPOCH = datetime.fromtimestamp(0, UTC)
 
 
 def _to_nanos(timestamp):
