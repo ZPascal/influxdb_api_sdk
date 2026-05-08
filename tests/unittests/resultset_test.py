@@ -236,6 +236,8 @@ class TestResultSet(unittest.TestCase):
 
 
 class TestResultSetCoverage(unittest.TestCase):
+    """Extra tests for resultset.py coverage gaps."""
+
     def test_raw_setter(self):
         """Cover the raw.setter (line 40)."""
         rs = ResultSet({"series": []})

@@ -1421,6 +1421,7 @@ class TestDataFrameClientCoverageExtra(TestCase):
     """Extra tests for _dataframe_client.py remaining gaps."""
 
     def setUp(self):
+        """Set up test fixtures for dataframe client coverage tests."""
         try:
             import pandas as pd
             import numpy as np

@@ -1321,11 +1321,11 @@ class FakeClient(InfluxDBClient):
     def query(self, query, params=None, expected_response_code=200, database=None):
         """Query data from the FakeClient object."""
         if query == "Fail":
-            raise Exception("Fail")
+            raise InfluxDBClientError("Fail")
         elif query == "Fail once" and self._host == "host1":
-            raise Exception("Fail Once")
+            raise InfluxDBClientError("Fail Once")
         elif query == "Fail twice" and self._host in "host1 host2":
-            raise Exception("Fail Twice")
+            raise InfluxDBClientError("Fail Twice")
         else:
             return "Success"
 
@@ -1336,19 +1336,19 @@ class TestFakeClient(unittest.TestCase):
     def test_fake_client_fail(self):
         """Test FakeClient raises on 'Fail' query."""
         c = FakeClient("host1", 8086)
-        with self.assertRaises(Exception):
+        with self.assertRaises(InfluxDBClientError):
             c.query("Fail")
 
     def test_fake_client_fail_once(self):
         """Test FakeClient raises on 'Fail once' from host1."""
         c = FakeClient("host1", 8086)
-        with self.assertRaises(Exception):
+        with self.assertRaises(InfluxDBClientError):
             c.query("Fail once")
 
     def test_fake_client_fail_twice(self):
         """Test FakeClient raises on 'Fail twice' from host1."""
         c = FakeClient("host1", 8086)
-        with self.assertRaises(Exception):
+        with self.assertRaises(InfluxDBClientError):
             c.query("Fail twice")
 
     def test_fake_client_success(self):

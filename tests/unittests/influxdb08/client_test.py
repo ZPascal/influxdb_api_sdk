@@ -877,6 +877,7 @@ class TestInfluxdb08ClientCoverage(unittest.TestCase):
                 client.request("query", method="GET", expected_response_code=200)
 
     def test_query_chunked_unicode_error(self):
+        """Test handling of unicode error in chunked JSON response."""
         from influxdb.influxdb08 import InfluxDBClient as C08
         import influxdb.influxdb08.chunked_json as cj
 
@@ -951,6 +952,7 @@ class TestInfluxdb08ClientCoverageExtra(unittest.TestCase):
     """Extra tests for influxdb08/client.py coverage gaps."""
 
     def setUp(self):
+        """Set up test fixtures for influxdb08 client coverage tests."""
         from influxdb.influxdb08 import InfluxDBClient as InfluxDB08Client
         self.C08 = InfluxDB08Client
         self.client = InfluxDB08Client("localhost", 8086, "user", "pass", "db")
@@ -965,7 +967,7 @@ class TestInfluxdb08ClientCoverageExtra(unittest.TestCase):
         """Cover 182->184 branch: from_dsn with minimal DSN (no hostname)."""
         # "influxdb:///mydb" has no hostname, so the hostname branch is not taken
         try:
-            client = self.C08.from_dsn("influxdb:///mydb")
+            self.C08.from_dsn("influxdb:///mydb")
             # No hostname specified, defaults are used
         except Exception:  # pragma: no cover
             pass  # If the parse fails, the branch is still covered
@@ -1002,6 +1004,7 @@ class TestInfluxdb08ClientCoverageExtra(unittest.TestCase):
         self.assertEqual(call_count[0], 2)
 
     def test_retry_infinite_retries_succeeds(self):
+        """Test infinite retries (retries=0) with eventual success after failure."""
         from urllib3.exceptions import ConnectionError as Urllib3ConnectionError
         client = self.C08("localhost", 8086, "u", "p", "db", retries=0)
         call_count = [0]

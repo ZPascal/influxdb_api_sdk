@@ -242,6 +242,8 @@ class TestSeriesHelper(TestCase):
 
 
 class TestInfluxdb08HelperCoverage(TestCase):
+    """Extra tests for influxdb08/helper.py coverage gaps."""
+
     def test_bulk_size_warn_forced(self):
         """Cover lines 74-75: bulk_size < 1 forced to 1."""
         from influxdb.influxdb08.helper import SeriesHelper

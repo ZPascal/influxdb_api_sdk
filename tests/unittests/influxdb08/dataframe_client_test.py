@@ -410,6 +410,7 @@ class TestInfluxdb08DFClientCoverageExtra(unittest.TestCase):
     """Additional tests for influxdb08/dataframe_client.py remaining gaps."""
 
     def setUp(self):
+        """Set up test fixtures with pandas and numpy imports."""
         try:
             import pandas as pd
             import numpy as np
@@ -497,7 +498,7 @@ class TestInfluxdb08DataFrameClientImportErrors(unittest.TestCase):
         with patch.dict(sys.modules, {'pandas': None}):
             from influxdb.influxdb08.dataframe_client import DataFrameClient
             with self.assertRaises(ImportError) as ctx:
-                client = DataFrameClient(host="localhost")
+                DataFrameClient(host="localhost")
             self.assertIn("Pandas", str(ctx.exception))
 
     def test_numpy_import_error_in_convert_array(self):
