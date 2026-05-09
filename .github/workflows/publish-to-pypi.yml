@@ -28,7 +28,7 @@ jobs:
           enable-cache: true
 
       - name: Install the requirements
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra docs
 
       - name: Build a binary wheel and a source tarball
         run: >-
@@ -44,8 +44,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
 
       - name: Deploy documentation to GitHub Pages
-        run: uv run mkdocs gh-deploy --force --clean
-        working-directory: docs
+        run: uv run mkdocs gh-deploy --force --clean --config-file docs/mkdocs.yml
 
       - name: Publish distribution package to PyPI
         if: startsWith(github.ref, 'refs/tags')
