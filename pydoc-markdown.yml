@@ -10,10 +10,10 @@ renderer:
   pages:
     - title: Home
       name: index
-      source: docs/influxdb.md
+      source: docs/influxdb_api_sdk.md
   mkdocs_config:
     site_name: InfluxDB API SDK
     theme: material
-    repo_url: https://github.com/ZPascal/influxdb-python
+    repo_url: https://github.com/ZPascal/influxdb_api_sdk
     markdown_extensions:
         - pymdownx.tasklist
