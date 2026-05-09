@@ -138,8 +138,7 @@ jobs:
         run: uv sync --extra docs
 
       - name: Build documentation
-        working-directory: docs
-        run: uv run mkdocs build
+        run: uv run mkdocs build --config-file docs/mkdocs.yml
 
   pr-integrationtest:
     uses: ./.github/workflows/integrationtest.yml
