@@ -1,4 +1,4 @@
-# InfluxDB API SDK ![Coverage report](https://github.com/ZPascal/influxdb_api_sdk/blob/main/docs/coverage.svg)
+# InfluxDB API SDK
 
 The repository includes an SDK for the InfluxDB v1 API and the Flux compatibility layer above InfluxDB version 1.8. It is possible to interact with all publicly available InfluxDB HTTP API endpoints supported by the [influxdb-python](https://github.com/influxdata/influxdb-python) client.
 
