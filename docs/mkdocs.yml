@@ -37,9 +37,12 @@ validation:
   unrecognized_links: warn
 
 nav:
-- Home: index.md
-- API SDK:
-  - Model: influxdb/model.md
-repo_url: https://github.com/ZPascal/influxdb-python
-site_name: InfluxDB API SDK
-theme: material
+  - Home: index.md
+  - API SDK:
+    - Client: influxdb/client.md
+    - DataFrame Client: influxdb/dataframe_client.md
+    - ResultSet: influxdb/resultset.md
+    - Series Helper: influxdb/helper.md
+    - Line Protocol: influxdb/line_protocol.md
+    - Chunked JSON: influxdb/chunked_json.md
+    - Exceptions: influxdb/exceptions.md
