@@ -1,0 +1,71 @@
+name: Integrationtest
+
+on:
+  schedule:
+    - cron: '0 22 * * 1'
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  integration-tests:
+    name: Integration Tests (InfluxDB ${{ matrix.influxdb_version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        influxdb_version: [ "1.8" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+
+    services:
+      influxdb:
+        image: influxdb:${{ matrix.influxdb_version }}
+        ports:
+          - 8086:8086
+        env:
+          INFLUXDB_HTTP_AUTH_ENABLED: "false"
+          INFLUXDB_REPORTING_DISABLED: "true"
+        options: >-
+          --health-cmd "curl -sf http://localhost:8086/ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 15s
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+
+      - name: Install the requirements
+        run: uv sync --extra test
+
+      - name: Run integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          INFLUXDB_HOST: localhost
+          INFLUXDB_PORT: "8086"
+          INFLUXDB_USER: root
+          INFLUXDB_PASSWORD: root
+        run: |
+          uv run pytest -m integration tests/integrationtests -v --tb=short --junitxml=pytest-integration.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results-influxdb-${{ matrix.influxdb_version }}-py${{ matrix.python-version }}
+          path: pytest-integration.xml
+          retention-days: 14

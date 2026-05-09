@@ -138,6 +138,53 @@ result = client.query(
 )
 ```
 
+## Development & Testing
+
+### Unit Tests
+
+Unit tests run without a live InfluxDB instance (all HTTP calls are mocked):
+
+```bash
+make test-unit
+# or directly:
+uv run pytest tests/unittests
+```
+
+### Integration Tests
+
+Integration tests require a running InfluxDB 1.8 instance. The easiest way is to use the provided `docker-compose.yml`:
+
+```bash
+# Start InfluxDB, run all integration tests, then stop InfluxDB
+make test-integration
+
+# Keep InfluxDB running after the tests (useful during development)
+make test-integration-keep
+
+# Run both unit and integration tests
+make test-all
+```
+
+You can also point the tests at an existing InfluxDB instance via environment variables:
+
+| Variable           | Default     | Description                  |
+|--------------------|-------------|------------------------------|
+| `INFLUXDB_HOST`    | `localhost` | InfluxDB hostname             |
+| `INFLUXDB_PORT`    | `8086`      | InfluxDB HTTP port            |
+| `INFLUXDB_USER`    | `root`      | Username                      |
+| `INFLUXDB_PASSWORD`| `root`      | Password                      |
+
+```bash
+INFLUXDB_HOST=my-server INFLUXDB_PORT=8086 \
+  uv run pytest -m integration tests/integrationtests -v
+```
+
+### Linting
+
+```bash
+make lint
+```
+
 ## Contribution
 
 If you would like to contribute something, have an improvement request, or want to make a change inside the code, please open a pull request.

@@ -141,3 +141,7 @@ jobs:
         working-directory: docs
         run: uv run mkdocs build
 
+  pr-integrationtest:
+    uses: ./.github/workflows/integrationtest.yml
+    secrets: inherit
+    needs: [pr-test, pr-lint, pr-coverage, pr-documentation]
