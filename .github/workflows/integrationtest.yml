@@ -63,7 +63,7 @@ jobs:
           uv run pytest -m integration tests/integrationtests -v --tb=short --junitxml=pytest-integration.xml
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: integration-test-results-influxdb-${{ matrix.influxdb_version }}-py${{ matrix.python-version }}
