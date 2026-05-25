@@ -8,7 +8,7 @@ include = ["influxdb*"]
 
 [project]
 name = "influxdb-api-sdk"
-version = "1.0.0"
+version = "1.0.1"
 description = "A InfluxDB API SDK"
 readme = "README.md"
 license = {text = "Apache-2.0 License"}
