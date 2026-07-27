@@ -1,6 +1,6 @@
 [project]
 name = "influxdb-api-sdk"
-version = "1.0.1"
+version = "1.0.3"
 description = "A InfluxDB API SDK"
 readme = "docs/content/index.md"
 license = {text = "Apache-2.0 License"}
