@@ -10,7 +10,7 @@ The `influxdb_api_sdk` is a maintained fork of the unmaintained `influxdb-python
 - Supports msgpack encoding for more efficient data transfer
 - Supports custom TCP socket options
 - Supports custom SSL contexts for TLS/mTLS
-- Python 3.10+ only (no Python 2 support)
+- Python 3.11+ only (no Python 2 support)
 - Modern `pyproject.toml`-based packaging
 
 The core features implemented in this library:
